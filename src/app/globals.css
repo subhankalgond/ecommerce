@@ -3,13 +3,32 @@
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: var(--font-serif), "Playfair Display", Georgia, Cambria, "Times New Roman", serif;
+  
+  --color-ivory: #faf8f5;
+  --color-cream: #f4efe6;
+  --color-parchment: #ede6da;
+  --color-stone-line: #e3ddd3;
+  --color-charcoal: #171614;
+  --color-charcoal-muted: #5e5952;
+  --color-terracotta: #8b5a42;
+  --color-terracotta-dark: #6f4430;
+  --color-olive: #515c4d;
 }
 
 html {
   scroll-behavior: smooth;
+  color-scheme: light;
 }
 
 body {
-  background-color: #ffffff;
-  color: #171717;
+  background-color: #faf8f5;
+  color: #171614;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: #ede6da;
+  color: #171614;
 }

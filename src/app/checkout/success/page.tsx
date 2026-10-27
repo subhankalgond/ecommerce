@@ -13,7 +13,8 @@ import { getShipping } from "@/lib/store-config";
 import { notifyNewOrder } from "@/lib/notify";
 
 export const metadata = {
-  title: "Order confirmed",
+  title: "Order Confirmed — Nova Threads",
+  description: "Verified order confirmation and dispatch timeline.",
 };
 
 interface OrderSummary {
@@ -56,7 +57,7 @@ async function getRazorpaySummary(
     return null;
   }
 
-  // 1. Verify the HMAC-SHA256 signature for this payment
+  // 1. Verify the HMAC-SHA256 signature
   const expected = crypto
     .createHmac("sha256", keySecret)
     .update(`${orderId}|${paymentId}`)
@@ -67,13 +68,12 @@ async function getRazorpaySummary(
     return null;
   }
 
-  // 2. Confirm the payment was captured and rebuild the order from its notes
+  // 2. Fetch capture status directly from Razorpay
   try {
     const rzp = new Razorpay({ key_id: keyId, key_secret: keySecret });
     const payment = await rzp.payments.fetch(paymentId);
     if (payment.status !== "captured") return null;
     const order = await rzp.orders.fetch(orderId);
-    // SDK types are loose (string | number for amount) — coerce defensively
     const amount =
       typeof payment.amount === "number"
         ? payment.amount
@@ -99,10 +99,6 @@ async function getRazorpaySummary(
   }
 }
 
-/**
- * Record the verified payment as an order (idempotent — the Razorpay verify
- * route usually got here first) and make sure the admin was notified.
- */
 async function finalizeOrder(
   summary: OrderSummary,
   provider: "stripe" | "razorpay",
@@ -142,30 +138,30 @@ export default async function SuccessPage({
   let summary: OrderSummary | null = null;
   let orderId: string | null = null;
   let codTotal: number | null = null;
-  let paymentLabel = "Payment";
+  let paymentLabel = "Online Payment";
 
-  if (params.cod === "1" && params.order_id) {
-    // COD: the order already exists — just show it
-    const order = findOrder(params.order_id);
-    if (order) {
-      orderId = order.id;
-      codTotal = order.total;
-      paymentLabel = "Cash on Delivery";
-      summary = {
-        amountTotal: order.total,
-        currency: order.currency,
-        lines: order.items,
-        email: order.email,
-      };
-    }
+  // Check if order already recorded (idempotent lookup)
+  const lookupKey = params.order_id || params.rzp_payment_id || params.session_id;
+  const existing = lookupKey ? findOrder(lookupKey) : undefined;
+
+  if (existing) {
+    orderId = existing.id;
+    codTotal = existing.paymentMethod === "cod" ? existing.total : null;
+    paymentLabel = existing.paymentMethod === "cod" ? "Cash on Delivery" : "Online Payment";
+    summary = {
+      amountTotal: existing.total,
+      currency: existing.currency,
+      lines: existing.items,
+      email: existing.email,
+    };
   } else if (params.session_id) {
-    paymentLabel = "Payment";
+    paymentLabel = "Stripe Payment";
     summary = await getStripeSummary(params.session_id);
     if (summary) {
       orderId = await finalizeOrder(summary, "stripe", params.session_id);
     }
   } else if (params.rzp_payment_id && params.rzp_order_id && params.rzp_signature) {
-    paymentLabel = "Payment";
+    paymentLabel = "Razorpay Payment";
     summary = await getRazorpaySummary(
       params.rzp_order_id,
       params.rzp_payment_id,
@@ -181,119 +177,141 @@ export default async function SuccessPage({
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
-      <p className="text-6xl">🎉</p>
-      <h1 className="mt-6 text-3xl font-bold">
-        {codTotal !== null ? "Order placed!" : "Thank you for your order!"}
-      </h1>
+    <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+      <div className="border border-[#ded7ca] bg-[#faf8f5] p-8 sm:p-12 text-center">
+        
+        {/* Verification Checkmark */}
+        <div className="mx-auto flex h-14 w-14 items-center justify-center border border-[#171614] bg-[#171614] text-[#faf8f5]">
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+        </div>
 
-      {summary ? (
-        <>
-          <p className="mt-3 text-sm text-neutral-500">
-            {codTotal !== null ? (
-              <>
-                Your order will be shipped to your address. Keep{" "}
-                <span className="font-semibold text-neutral-900">
-                  {formatPrice(codTotal ?? 0)}
-                </span>{" "}
-                ready to pay on delivery.
-              </>
-            ) : (
-              <>
-                {paymentLabel} of{" "}
-                <span className="font-semibold text-neutral-900">
-                  {new Intl.NumberFormat("en-IN", {
-                    style: "currency",
-                    currency: summary.currency,
-                    maximumFractionDigits: 0,
-                  }).format(summary.amountTotal / 100)}
-                </span>{" "}
-                confirmed{summary.email ? ` — a receipt is on its way to ${summary.email}` : ""}.
-              </>
+        <span className="mt-6 inline-block text-[10px] font-semibold tracking-[0.24em] uppercase text-[#8b5a42]">
+          Verified Confirmation
+        </span>
+        <h1 className="mt-2 font-serif text-3xl sm:text-4xl text-[#171614]">
+          {codTotal !== null ? "Order Placed Successfully" : "Thank You For Your Order"}
+        </h1>
+
+        {summary ? (
+          <>
+            <p className="mt-3 text-xs sm:text-sm text-[#5e574e] max-w-md mx-auto leading-relaxed">
+              {codTotal !== null ? (
+                <>
+                  Your garments have been scheduled for dispatch. Please have{" "}
+                  <strong className="font-semibold text-[#171614]">
+                    {formatPrice(codTotal ?? 0)}
+                  </strong>{" "}
+                  ready in cash for doorstep settlement.
+                </>
+              ) : (
+                <>
+                  {paymentLabel} of{" "}
+                  <strong className="font-semibold text-[#171614]">
+                    {new Intl.NumberFormat("en-IN", {
+                      style: "currency",
+                      currency: summary.currency,
+                      maximumFractionDigits: 0,
+                    }).format(summary.amountTotal / 100)}
+                  </strong>{" "}
+                  has been verified server-side
+                  {summary.email ? ` and an itemized receipt has been dispatched to ${summary.email}` : ""}.
+                </>
+              )}
+            </p>
+
+            {orderId && (
+              <div className="mx-auto mt-8 max-w-sm border border-[#171614] bg-[#f5f1ea] p-5">
+                <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[#8c857b]">
+                  Unique Order Reference
+                </p>
+                <p className="mt-1 font-mono text-2xl font-bold tracking-widest text-[#171614]">
+                  {orderId}
+                </p>
+                <p className="mt-2 text-[11px] text-[#615a51]">
+                  Keep this ID for order tracking and customer care communications.
+                </p>
+                <div className="mt-4">
+                  <Link
+                    href={`/track?order=${encodeURIComponent(orderId)}`}
+                    className="inline-block border border-[#171614] bg-[#171614] px-6 py-2 text-xs font-semibold tracking-wider uppercase text-white hover:bg-[#33302b] transition"
+                  >
+                    Track Shipment Status →
+                  </Link>
+                </div>
+              </div>
             )}
-          </p>
 
-          {orderId && (
-            <div className="mx-auto mt-6 max-w-sm rounded-2xl border border-neutral-900 bg-neutral-50 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Your order ID
-              </p>
-              <p className="mt-1 font-mono text-2xl font-bold">{orderId}</p>
-              <p className="mt-2 text-xs text-neutral-500">
-                Save this — you&apos;ll use it to track your delivery.
-              </p>
-              <Link
-                href={`/track?order=${encodeURIComponent(orderId)}`}
-                className="mt-3 inline-block rounded-full bg-neutral-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-700"
-              >
-                Track this order →
-              </Link>
+            {/* Line Items Review */}
+            <div className="mt-10 border border-[#e5dfd5] bg-white p-6 text-left">
+              <h2 className="font-serif text-base text-[#171614] border-b border-[#ede6da] pb-3">
+                Garment Manifest
+              </h2>
+              {summary.lines.length > 0 ? (
+                <ul className="mt-4 divide-y divide-[#ede6da]">
+                  {summary.lines.map((line) => (
+                    <li key={`${line.slug}-${line.size}`} className="flex items-center gap-4 py-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`${line.image}&w=96`}
+                        alt={line.name}
+                        className="h-16 w-12 object-cover border border-[#e5dfd5]"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/products/${line.slug}`}
+                          className="font-serif text-xs text-[#171614] hover:text-[#8b5a42] transition"
+                        >
+                          {line.name}
+                        </Link>
+                        <p className="mt-0.5 text-[11px] text-[#7a7368]">
+                          Size: {line.size} · Quantity: {line.qty}
+                        </p>
+                      </div>
+                      <span className="text-xs font-semibold text-[#171614]">
+                        {formatPrice(line.price * line.qty)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-xs text-[#7a7368]">
+                  Garment details successfully archived to order store.
+                </p>
+              )}
             </div>
-          )}
+          </>
+        ) : (
+          <p className="mt-4 text-xs text-[#5e574e]">
+            Your payment was confirmed and our fulfilment studio has received the order.
+          </p>
+        )}
 
-          <div className="mt-8 rounded-2xl border border-neutral-200 p-6 text-left">
-            <h2 className="font-semibold">Order summary</h2>
-            {summary.lines.length > 0 ? (
-              <ul className="mt-4 space-y-4">
-                {summary.lines.map((line) => (
-                  <li key={`${line.slug}-${line.size}`} className="flex items-center gap-4">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`${line.image}&w=96`}
-                      alt={line.name}
-                      className="h-16 w-14 rounded-md object-cover"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/products/${line.slug}`}
-                        className="truncate text-sm font-medium hover:underline"
-                      >
-                        {line.name}
-                      </Link>
-                      <p className="text-xs text-neutral-500">
-                        Size {line.size} · Qty {line.qty}
-                      </p>
-                    </div>
-                    <p className="text-sm font-semibold">
-                      {formatPrice(line.price * line.qty)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-2 text-sm text-neutral-500">
-                Order details recorded.
-              </p>
-            )}
-          </div>
-        </>
-      ) : (
-        <p className="mt-3 text-sm text-neutral-500">
-          Your payment was received and your order is confirmed.
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+          <Link
+            href="/products"
+            className="border border-[#171614] bg-[#171614] px-7 py-3 text-xs font-semibold tracking-wider uppercase text-white hover:bg-[#33302b] transition"
+          >
+            Continue Shopping
+          </Link>
+          <Link
+            href="/track"
+            className="border border-[#ded7ca] bg-white px-7 py-3 text-xs font-semibold tracking-wider uppercase text-[#171614] hover:border-[#171614] transition"
+          >
+            Track All Orders
+          </Link>
+        </div>
+
+        <p className="mt-8 text-[11px] text-[#8c857b]">
+          Need modifications or sizing advice? Consult our{" "}
+          <Link href="/support" className="underline hover:text-[#171614]">
+            Client Care Services
+          </Link>{" "}
+          or track delivery progress at /track.
         </p>
-      )}
 
-      <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-        <Link
-          href="/products"
-          className="rounded-full bg-neutral-900 px-8 py-3 text-sm font-semibold text-white transition hover:bg-neutral-700"
-        >
-          Continue shopping
-        </Link>
-        <Link
-          href="/track"
-          className="rounded-full border border-neutral-300 px-8 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
-        >
-          Track order
-        </Link>
       </div>
-      <p className="mt-6 text-xs text-neutral-400">
-        Questions? Visit our{" "}
-        <Link href="/support" className="underline underline-offset-4">
-          support page
-        </Link>{" "}
-        or track your order any time at /track.
-      </p>
     </div>
   );
 }

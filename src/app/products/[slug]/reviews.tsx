@@ -11,9 +11,9 @@ interface Props {
 
 function Stars({ value }: { value: number }) {
   return (
-    <span className="text-amber-500" aria-label={`${value} out of 5 stars`}>
+    <span className="text-[#8b5a42] tracking-widest text-xs" aria-label={`${value} out of 5 stars`}>
       {"★".repeat(Math.round(value))}
-      <span className="text-neutral-300">{"★".repeat(5 - Math.round(value))}</span>
+      <span className="text-[#d5cebf]">{"★".repeat(5 - Math.round(value))}</span>
     </span>
   );
 }
@@ -33,7 +33,7 @@ export default function ProductReviews({ productId, initialReviews, summary }: P
   const submit = () => {
     setError(null);
     if (!author.trim() || !body.trim()) {
-      setError("Please add your name and a few words about the product.");
+      setError("Please provide your name and your review notes.");
       return;
     }
     setLoading(true);
@@ -52,7 +52,7 @@ export default function ProductReviews({ productId, initialReviews, summary }: P
           setError(d.error ?? "Could not submit review.");
         }
       })
-      .catch(() => setError("Network error — try again."))
+      .catch(() => setError("Network error — please try again."))
       .finally(() => setLoading(false));
   };
 
@@ -60,98 +60,134 @@ export default function ProductReviews({ productId, initialReviews, summary }: P
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-[#e5dfd5] pb-5 gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Customer reviews</h2>
+          <span className="text-[10px] font-semibold tracking-[0.24em] uppercase text-[#8b5a42]">
+            Feedback &amp; Wear Notes
+          </span>
+          <h2 className="mt-1 font-serif text-2xl sm:text-3xl text-[#171614]">
+            Customer Reviews
+          </h2>
           {count > 0 ? (
-            <p className="mt-1 flex items-center gap-2 text-sm text-neutral-600">
+            <p className="mt-1 flex items-center gap-2 text-xs text-[#615a51]">
               <Stars value={summary.average} />
               <span>
-                {summary.average} out of 5 · {count} review{count === 1 ? "" : "s"}
+                {summary.average} out of 5 · {count} verified {count === 1 ? "review" : "reviews"}
               </span>
             </p>
           ) : (
-            <p className="mt-1 text-sm text-neutral-500">
-              No reviews yet — be the first to share your experience.
+            <p className="mt-1 text-xs text-[#736c62]">
+              No customer reviews recorded yet for this piece.
             </p>
           )}
         </div>
+
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="rounded-full border border-neutral-900 px-5 py-2.5 text-sm font-semibold text-neutral-900 transition hover:bg-neutral-900 hover:text-white"
+          className="border border-[#171614] bg-white px-5 py-2 text-xs font-semibold tracking-wider uppercase text-[#171614] hover:bg-[#171614] hover:text-white transition"
         >
-          {open ? "Close" : "Write a review"}
+          {open ? "Cancel" : "Write a Review"}
         </button>
       </div>
 
       {open && (
-        <div className="mt-6 rounded-2xl border border-neutral-200 p-5">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Your rating:</span>
+        <div className="mt-6 border border-[#ded7ca] bg-[#fbf9f5] p-6 text-xs">
+          <p className="font-serif text-base text-[#171614]">Submit Your Review</p>
+          
+          <div className="mt-4 flex items-center gap-2">
+            <span className="font-semibold uppercase tracking-wider text-[#8c857b]">Rating:</span>
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
                 type="button"
                 onClick={() => setRating(n)}
                 aria-label={`${n} star${n === 1 ? "" : "s"}`}
-                className={`text-xl transition ${n <= rating ? "text-amber-500" : "text-neutral-300 hover:text-amber-400"}`}
+                className={`text-lg transition ${n <= rating ? "text-[#8b5a42]" : "text-[#ded7ca] hover:text-[#8b5a42]"}`}
               >
                 ★
               </button>
             ))}
           </div>
-          <input
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
-            placeholder="Your name"
-            className="mt-3 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none"
-          />
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Review headline (optional)"
-            className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none"
-          />
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="What did you like or dislike?"
-            rows={3}
-            className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none"
-          />
-          <input
-            value={photo}
-            onChange={(e) => setPhoto(e.target.value)}
-            placeholder="Photo URL (optional)"
-            className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none"
-          />
-          {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
-          <button
-            type="button"
-            onClick={submit}
-            disabled={loading}
-            className="mt-3 rounded-full bg-neutral-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:opacity-50"
-          >
-            {loading ? "Submitting…" : "Submit review"}
-          </button>
+
+          <div className="mt-4 space-y-3">
+            <input
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              placeholder="Your Name (e.g. Eleanor W.)"
+              className="w-full border border-[#ded7ca] bg-white px-3 py-2 text-xs text-[#171614] focus:border-[#171614] focus:outline-none"
+            />
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Review Headline (optional)"
+              className="w-full border border-[#ded7ca] bg-white px-3 py-2 text-xs text-[#171614] focus:border-[#171614] focus:outline-none"
+            />
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Describe the fit, drape, texture, and longevity..."
+              rows={4}
+              className="w-full border border-[#ded7ca] bg-white px-3 py-2 text-xs text-[#171614] focus:border-[#171614] focus:outline-none"
+            />
+            <input
+              value={photo}
+              onChange={(e) => setPhoto(e.target.value)}
+              placeholder="Photo URL (optional)"
+              className="w-full border border-[#ded7ca] bg-white px-3 py-2 text-xs text-[#171614] focus:border-[#171614] focus:outline-none"
+            />
+          </div>
+
+          {error && <p className="mt-2 text-xs text-[#8b5a42] font-medium">{error}</p>}
+
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={submit}
+              disabled={loading}
+              className="border border-[#171614] bg-[#171614] px-6 py-2.5 text-xs font-semibold tracking-wider uppercase text-white hover:bg-[#33302b] transition disabled:opacity-40"
+            >
+              {loading ? "Publishing…" : "Publish Review"}
+            </button>
+          </div>
         </div>
       )}
 
-      <ul className="mt-8 space-y-6">
+      {/* Review List */}
+      <ul className="mt-8 divide-y divide-[#ede6da]">
         {reviews.map((r) => (
-          <li key={r.id} className="border-b border-neutral-100 pb-6 last:border-0">
-            <div className="flex items-center gap-3">
-              <Stars value={r.rating} />
-              <p className="text-sm font-semibold">{r.title || "Verified purchase"}</p>
+          <li key={r.id} className="py-6 first:pt-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Stars value={r.rating} />
+                <span className="font-serif text-sm font-medium text-[#171614]">
+                  {r.title || "Verified Experience"}
+                </span>
+              </div>
+              <span className="text-[11px] text-[#8c857b]">
+                {new Date(r.createdAt).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
             </div>
-            <p className="mt-2 text-sm leading-relaxed text-neutral-600">{r.body}</p>
+
+            <p className="mt-2.5 text-xs leading-relaxed text-[#544e45]">
+              {r.body}
+            </p>
+
             {r.photo && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={r.photo} alt="Customer photo" className="mt-3 h-24 w-24 rounded-lg object-cover" />
+              <img
+                src={r.photo}
+                alt="Customer submission"
+                className="mt-3 h-28 w-24 object-cover border border-[#e5dfd5]"
+              />
             )}
-            <p className="mt-2 text-xs text-neutral-400">
-              {r.author} · {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+
+            <p className="mt-2 text-[10px] uppercase tracking-wider text-[#8c857b]">
+              Reviewed by {r.author} · <span className="text-[#515c4d]">Verified Customer</span>
             </p>
           </li>
         ))}

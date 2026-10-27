@@ -4,11 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCart } from "@/components/cart-provider";
-import {
-  formatPrice,
-  FREE_SHIPPING_THRESHOLD,
-  SHIPPING_FEE,
-} from "@/lib/cart-format";
+import { formatPrice, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE } from "@/lib/cart-format";
 import type { CartItem } from "@/components/cart-provider";
 
 const SAVED_KEY = "nova-threads-saved-for-later";
@@ -28,11 +24,9 @@ export default function CartPage() {
     subtotal,
     shipping,
     total,
-    count,
     hydrated,
     updateQuantity,
     removeItem,
-    clearCart,
   } = useCart();
 
   const [coupon, setCoupon] = useState("");
@@ -40,7 +34,7 @@ export default function CartPage() {
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
   const [saved, setSaved] = useState<CartItem[]>([]);
 
-  // load saved-for-later
+  // Load saved-for-later
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(SAVED_KEY);
@@ -68,19 +62,21 @@ export default function CartPage() {
   };
 
   const moveToCart = (item: CartItem) => {
-    // re-add via a synthetic add through quantity update is not possible
-    // without the product object; simplest is a page-level fetch-free hack:
-    // we re-insert into localStorage cart on next render using updateQuantity.
-    // Instead we use the public cart payload API: add via checkout flow.
     persistSaved(saved.filter((s) => s.key !== item.key));
-    // Add through the drawer provider by dispatching a custom event the
-    // cart-provider listens to (keeps single source of truth).
-    window.dispatchEvent(
-      new CustomEvent("nova:add-item", { detail: item })
-    );
+    try {
+      const raw = window.localStorage.getItem("nova-threads-cart-v1");
+      const cart = raw ? (JSON.parse(raw) as CartItem[]) : [];
+      if (!cart.some((c) => c.key === item.key)) {
+        cart.push(item);
+        window.localStorage.setItem("nova-threads-cart-v1", JSON.stringify(cart));
+        window.location.reload();
+      }
+    } catch {
+      // ignore
+    }
   };
 
-  // Ask the server for a quote whenever cart or coupon changes
+  // Fetch real-time server quote
   useEffect(() => {
     if (!hydrated || items.length === 0) {
       setQuote(null);
@@ -101,308 +97,274 @@ export default function CartPage() {
       .then((r) => r.json())
       .then((d: Quote) => {
         setQuote(d);
-        setCouponMsg(d.couponError ?? (d.discount > 0 ? `Coupon ${d.couponApplied} applied — you save ${formatPrice(d.discount)}` : null));
+        if (d.couponError) {
+          setCouponMsg(d.couponError);
+        } else if (d.discount > 0) {
+          setCouponMsg(`Coupon ${d.couponApplied} applied — savings of ${formatPrice(d.discount)}`);
+        } else {
+          setCouponMsg(null);
+        }
       })
       .catch(() => setQuote(null));
   }, [items, coupon, hydrated]);
 
-  // listen for re-adds from saved list
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as CartItem;
-      if (!detail) return;
-      // put the item back through localStorage merge
-      try {
-        const raw = window.localStorage.getItem("nova-threads-cart-v1");
-        const cart = raw ? (JSON.parse(raw) as CartItem[]) : [];
-        if (!cart.some((c) => c.key === detail.key)) {
-          cart.push(detail);
-          window.localStorage.setItem("nova-threads-cart-v1", JSON.stringify(cart));
-          window.location.reload();
-        }
-      } catch {
-        // ignore
-      }
-    };
-    window.addEventListener("nova:add-item", handler);
-    return () => window.removeEventListener("nova:add-item", handler);
-  }, []);
-
   if (!hydrated) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="h-8 w-48 animate-pulse rounded bg-neutral-200" />
-        <div className="mt-8 h-32 animate-pulse rounded-xl bg-neutral-100" />
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="h-8 w-48 animate-pulse bg-[#ede8df]" />
+        <div className="mt-8 h-40 animate-pulse bg-[#ede8df]" />
       </div>
     );
   }
 
-  if (items.length === 0) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="mx-auto flex max-w-md flex-col items-center text-center">
-          <p className="text-5xl">🛍️</p>
-          <h1 className="mt-4 text-2xl font-bold">Your cart is empty</h1>
-          <p className="mt-2 text-sm text-neutral-500">
-            Looks like you haven&apos;t added anything yet.
-          </p>
-          <Link
-            href="/products"
-            className="mt-6 rounded-full bg-neutral-900 px-8 py-3 text-sm font-semibold text-white transition hover:bg-neutral-700"
-          >
-            Start shopping
-          </Link>
-          {saved.length > 0 && (
-            <div className="mt-10 w-full text-left">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-                Saved for later ({saved.length})
-              </h2>
-              <ul className="mt-4 divide-y divide-neutral-200 border-y border-neutral-200">
-                {saved.map((item) => (
-                  <li key={item.key} className="flex items-center gap-4 py-4">
-                    <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
-                      <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{item.name}</p>
-                      <p className="text-xs text-neutral-500">Size {item.size}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => moveToCart(item)}
-                      className="rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold hover:bg-neutral-100"
-                    >
-                      Move to cart
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => persistSaved(saved.filter((s) => s.key !== item.key))}
-                      className="text-xs text-neutral-400 hover:text-rose-600"
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
   const effSubtotal = quote?.subtotal ?? subtotal;
   const effShipping = quote?.shipping ?? shipping;
   const effDiscount = quote?.discount ?? 0;
   const effTotal = quote?.total ?? total;
 
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="text-3xl font-bold">Your cart</h1>
-      <p className="mt-1 text-sm text-neutral-500">
-        {count} {count === 1 ? "item" : "items"}
-      </p>
+  if (items.length === 0 && saved.length === 0) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-28 text-center sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center border border-[#d5cfc4] text-[#8c857b]">
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+          </svg>
+        </div>
+        <h1 className="mt-4 font-serif text-3xl text-[#171614]">Your Shopping Bag is Empty</h1>
+        <p className="mt-2 text-xs text-[#6b645b] max-w-sm mx-auto leading-relaxed">
+          Explore our seasonal edits and permanent collection to select thoughtfully crafted essentials.
+        </p>
+        <div className="mt-6">
+          <Link
+            href="/products"
+            className="inline-block border border-[#171614] bg-[#171614] px-8 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-white hover:bg-[#33302b] transition"
+          >
+            Explore Catalogue
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
-      <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_360px]">
-        {/* Items */}
-        <div>
-          {remaining > 0 && quote?.discount === 0 && (
-            <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Add{" "}
-              <span className="font-semibold">{formatPrice(remaining)}</span> more
-              to get free shipping (otherwise {formatPrice(SHIPPING_FEE)}).
-            </p>
-          )}
-          <ul className="divide-y divide-neutral-200 border-y border-neutral-200">
-            {items.map((item) => (
-              <li key={item.key} className="flex gap-4 py-5">
-                <Link
-                  href={`/products/${item.slug}`}
-                  className="relative h-28 w-24 shrink-0 overflow-hidden rounded-lg bg-neutral-100"
-                >
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                    sizes="96px"
-                  />
-                </Link>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <Link
-                        href={`/products/${item.slug}`}
-                        className="truncate font-medium hover:underline"
-                      >
-                        {item.name}
-                      </Link>
-                      <p className="mt-0.5 text-sm text-neutral-500">
-                        Size: {item.size} · {formatPrice(item.price)} each
-                      </p>
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      {/* Title */}
+      <div className="border-b border-[#e5dfd5] pb-6">
+        <span className="text-[10px] font-semibold tracking-[0.24em] uppercase text-[#8b5a42]">
+          Review &amp; Summary
+        </span>
+        <h1 className="mt-1 font-serif text-3xl sm:text-4xl text-[#171614]">
+          Shopping Bag
+        </h1>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-12 lg:grid-cols-12">
+        {/* Left: Bag Items */}
+        <div className="lg:col-span-8">
+          {items.length > 0 ? (
+            <div className="divide-y divide-[#ede6da] border-b border-[#ede6da]">
+              {items.map((item) => (
+                <div key={item.key} className="flex gap-6 py-6">
+                  <Link
+                    href={`/products/${item.slug}`}
+                    className="relative aspect-[3/4] h-32 w-24 shrink-0 overflow-hidden bg-[#ede8df] border border-[#e5dfd5]"
+                  >
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                      sizes="96px"
+                    />
+                  </Link>
+
+                  <div className="flex flex-1 flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <Link
+                            href={`/products/${item.slug}`}
+                            className="font-serif text-base text-[#171614] hover:text-[#8b5a42] transition"
+                          >
+                            {item.name}
+                          </Link>
+                          <p className="mt-1 text-xs text-[#736c62]">
+                            Selected Size: <strong className="font-medium text-[#171614]">{item.size}</strong>
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold text-[#171614]">
+                          {formatPrice(item.price * item.quantity)}
+                        </span>
+                      </div>
                     </div>
-                    <p className="font-semibold">
-                      {formatPrice(item.price * item.quantity)}
-                    </p>
-                  </div>
-                  <div className="mt-auto flex items-center justify-between pt-3">
-                    <div className="flex items-center rounded-full border border-neutral-300">
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.key, item.quantity - 1)}
-                        className="px-3 py-1.5 text-neutral-600 hover:text-neutral-900"
-                        aria-label="Decrease quantity"
-                      >
-                        −
-                      </button>
-                      <span className="w-7 text-center text-sm font-medium">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.key, item.quantity + 1)}
-                        className="px-3 py-1.5 text-neutral-600 hover:text-neutral-900"
-                        aria-label="Increase quantity"
-                      >
-                        +
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <button
-                        type="button"
-                        onClick={() => saveForLater(item)}
-                        className="text-sm text-neutral-500 underline-offset-2 hover:text-neutral-900 hover:underline"
-                      >
-                        Save for later
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.key)}
-                        className="text-sm text-neutral-400 underline-offset-2 hover:text-rose-600 hover:underline"
-                      >
-                        Remove
-                      </button>
+
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-[#ede6da] pt-3">
+                      {/* Quantity Stepper */}
+                      <div className="flex items-center border border-[#ded7ca] bg-white text-xs">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.key, item.quantity - 1)}
+                          className="px-2.5 py-1 text-[#615a51] hover:text-[#171614]"
+                          aria-label="Decrease quantity"
+                        >
+                          −
+                        </button>
+                        <span className="w-8 text-center text-xs font-semibold text-[#171614]">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.key, item.quantity + 1)}
+                          className="px-2.5 py-1 text-[#615a51] hover:text-[#171614]"
+                          aria-label="Increase quantity"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-4 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => saveForLater(item)}
+                          className="text-[#615a51] hover:text-[#171614] transition underline underline-offset-2"
+                        >
+                          Save for later
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(item.key)}
+                          className="text-[#8b5a42] hover:text-[#6f4430] transition underline underline-offset-2"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={clearCart}
-            className="mt-4 text-sm text-neutral-500 underline-offset-2 hover:text-rose-600 hover:underline"
-          >
-            Clear cart
-          </button>
+              ))}
+            </div>
+          ) : (
+            <p className="py-8 text-xs text-[#736c62]">
+              No active items in your bag.
+            </p>
+          )}
 
+          {/* Saved for Later Section */}
           {saved.length > 0 && (
-            <div className="mt-10">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-                Saved for later ({saved.length})
+            <div className="mt-14 border-t border-[#e5dfd5] pt-8">
+              <h2 className="font-serif text-xl text-[#171614]">
+                Saved For Later ({saved.length})
               </h2>
-              <ul className="mt-4 divide-y divide-neutral-200 border-y border-neutral-200">
+              <div className="mt-6 divide-y divide-[#ede6da]">
                 {saved.map((item) => (
-                  <li key={item.key} className="flex items-center gap-4 py-4">
-                    <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
-                      <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
+                  <div key={item.key} className="flex items-center gap-6 py-4">
+                    <div className="relative aspect-[3/4] h-20 w-16 shrink-0 overflow-hidden bg-[#ede8df] border border-[#e5dfd5]">
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{item.name}</p>
-                      <p className="text-xs text-neutral-500">Size {item.size} · {formatPrice(item.price)}</p>
+                      <p className="font-serif text-xs text-[#171614]">{item.name}</p>
+                      <p className="text-[11px] text-[#736c62]">Size: {item.size} · {formatPrice(item.price)}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => moveToCart(item)}
-                      className="rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold hover:bg-neutral-100"
+                      className="border border-[#171614] bg-white px-3 py-1.5 text-xs font-semibold tracking-wider uppercase text-[#171614] hover:bg-[#171614] hover:text-white transition"
                     >
-                      Move to cart
+                      Move to Bag
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => persistSaved(saved.filter((s) => s.key !== item.key))}
-                      className="text-xs text-neutral-400 hover:text-rose-600"
-                    >
-                      Remove
-                    </button>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Summary */}
-        <aside className="h-fit rounded-2xl border border-neutral-200 p-6 lg:sticky lg:top-24">
-          <h2 className="text-lg font-semibold">Order summary</h2>
+        {/* Right: Order Summary & Coupon */}
+        <div className="lg:col-span-4">
+          <div className="border border-[#ded7ca] bg-[#f7f4ee] p-6 space-y-6">
+            <h2 className="font-serif text-lg text-[#171614] border-b border-[#e2dcd2] pb-3">
+              Order Summary
+            </h2>
 
-          {/* Coupon */}
-          <div className="mt-4">
-            <div className="flex gap-2">
-              <input
-                value={coupon}
-                onChange={(e) => setCoupon(e.target.value.toUpperCase())}
-                placeholder="Coupon code"
-                className="min-w-0 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm uppercase focus:border-neutral-900 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => setCouponMsg(null)}
-                className="rounded-lg border border-neutral-900 px-4 py-2 text-sm font-semibold transition hover:bg-neutral-900 hover:text-white"
-              >
-                Apply
-              </button>
-            </div>
-            {couponMsg && (
-              <p className={`mt-2 text-xs ${effDiscount > 0 || !couponMsg.includes("Invalid") ? "text-emerald-600" : "text-rose-600"}`}>
-                {couponMsg}
-              </p>
-            )}
-            <p className="mt-1.5 text-[11px] text-neutral-400">
-              Try <span className="font-mono font-semibold">WELCOME10</span> ·{" "}
-              <span className="font-mono font-semibold">FLAT200</span>
-            </p>
-          </div>
-
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-neutral-600">Subtotal</dt>
-              <dd className="font-medium">{formatPrice(effSubtotal)}</dd>
-            </div>
-            {effDiscount > 0 && (
-              <div className="flex justify-between text-emerald-600">
-                <dt>Coupon discount</dt>
-                <dd className="font-medium">−{formatPrice(effDiscount)}</dd>
+            {/* Coupon Application */}
+            <div>
+              <label className="block text-[10px] font-semibold tracking-wider uppercase text-[#8c857b] mb-1.5">
+                Promotional Code
+              </label>
+              <div className="flex gap-2">
+                <input
+                  value={coupon}
+                  onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                  placeholder="WELCOME10 / FLAT200"
+                  className="flex-1 border border-[#ded7ca] bg-white px-3 py-2 text-xs uppercase text-[#171614] placeholder:text-[#9e978e] focus:border-[#171614] focus:outline-none"
+                />
               </div>
-            )}
-            <div className="flex justify-between">
-              <dt className="text-neutral-600">Shipping</dt>
-              <dd className="font-medium">
-                {effShipping === 0 ? "Free" : formatPrice(effShipping)}
-              </dd>
+              {couponMsg && (
+                <p className={`mt-2 text-xs font-medium ${quote?.discount ? "text-[#515c4d]" : "text-[#8b5a42]"}`}>
+                  {couponMsg}
+                </p>
+              )}
             </div>
-            <div className="flex justify-between border-t border-neutral-200 pt-3 text-base">
-              <dt className="font-semibold">Total</dt>
-              <dd className="font-bold">{formatPrice(effTotal)}</dd>
+
+            {/* Price Calculations */}
+            <dl className="space-y-2.5 text-xs border-t border-[#e2dcd2] pt-4">
+              <div className="flex justify-between text-[#615a51]">
+                <dt>Garment Subtotal</dt>
+                <dd>{formatPrice(effSubtotal)}</dd>
+              </div>
+
+              {effDiscount > 0 && (
+                <div className="flex justify-between text-[#8b5a42] font-medium">
+                  <dt>Promotional Discount</dt>
+                  <dd>−{formatPrice(effDiscount)}</dd>
+                </div>
+              )}
+
+              <div className="flex justify-between text-[#615a51]">
+                <dt>Domestic Shipping</dt>
+                <dd>
+                  {effShipping === 0 ? (
+                    <span className="text-[#515c4d] font-medium">Complimentary</span>
+                  ) : (
+                    formatPrice(effShipping)
+                  )}
+                </dd>
+              </div>
+
+              <div className="flex justify-between border-t border-[#ded7ca] pt-3 text-base font-serif font-medium text-[#171614]">
+                <dt>Estimated Total</dt>
+                <dd>{formatPrice(effTotal)}</dd>
+              </div>
+            </dl>
+
+            <div className="pt-2 space-y-3">
+              <Link
+                href="/checkout"
+                className="block w-full border border-[#171614] bg-[#171614] py-3 text-center text-xs font-semibold tracking-[0.14em] uppercase text-white hover:bg-[#33302b] transition"
+              >
+                Proceed to Checkout
+              </Link>
+              <Link
+                href="/products"
+                className="block text-center text-xs text-[#736c62] hover:text-[#171614] transition"
+              >
+                ← Continue Browsing Catalogue
+              </Link>
             </div>
-          </dl>
-          <Link
-            href="/checkout"
-            className="mt-6 block rounded-full bg-neutral-900 py-3 text-center text-sm font-semibold text-white transition hover:bg-neutral-700"
-          >
-            Proceed to checkout
-          </Link>
-          <Link
-            href="/products"
-            className="mt-3 block text-center text-sm text-neutral-600 underline-offset-4 hover:underline"
-          >
-            Continue shopping
-          </Link>
-          <p className="mt-4 text-center text-xs text-neutral-400">
-            Taxes included · Secure payment
-          </p>
-        </aside>
+
+            <div className="border-t border-[#e2dcd2] pt-4 text-[10px] text-[#8c857b] space-y-1">
+              <p>• Verified checkout via Razorpay &amp; Stripe</p>
+              <p>• UPI, NetBanking, Credit/Debit cards &amp; COD accepted</p>
+              <p>• Free shipping automatically applies on orders over ₹999</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

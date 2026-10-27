@@ -2,275 +2,387 @@
 
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
-import { CATEGORIES } from "@/lib/products";
 import { useCart } from "@/components/cart-provider";
+import { useWishlist } from "@/components/wishlist-provider";
 import { useCustomer } from "@/components/customer-auth-provider";
 import SearchBar from "@/components/search-bar";
 
 export default function Header() {
-  const { count, hydrated, openCart } = useCart();
+  const { count: cartCount, hydrated: cartHydrated, openCart } = useCart();
+  const { count: wishlistCount, hydrated: wishlistHydrated } = useWishlist();
   const { user, logout } = useCustomer();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
 
+  // Close dropdown on click outside
   useEffect(() => {
-    const close = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setAccountMenuOpen(false);
+      }
     };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  return (
-    <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="flex h-16 items-center justify-between gap-4">
-          {/* Left: mobile menu + logo */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setMobileOpen((o) => !o)}
-              className="rounded-md p-2 text-neutral-700 hover:bg-neutral-100 lg:hidden"
-              aria-label="Toggle menu"
-              aria-expanded={mobileOpen}
-            >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.8}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d={mobileOpen ? "M6 18L18 6M6 6l12 12" : "M4 7h16M4 12h16M4 17h16"}
-                />
-              </svg>
-            </button>
-            <Link href="/" className="text-lg font-bold tracking-tight">
-              Nova&nbsp;Threads
-            </Link>
-          </div>
+  // Prevent body scroll when mobile drawer is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
 
-          {/* Center: desktop nav */}
-          <nav className="hidden items-center gap-1 lg:flex">
-            {CATEGORIES.map((cat) => (
-              <Link
-                key={cat.value}
-                href={cat.value === "all" ? "/products" : `/products?category=${cat.value}`}
-                className="rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-900"
+  return (
+    <>
+      {/* Announcement Strip */}
+      <div className="border-b border-[#e5dfd5] bg-[#f5f0e8] px-4 py-2 text-center text-[11px] font-medium tracking-[0.16em] uppercase text-[#615a51]">
+        <span>Complimentary delivery on orders over ₹999</span>
+        <span className="mx-2 text-[#b0a99f]">·</span>
+        <span className="text-[#171614]">10% off with code <strong className="font-semibold tracking-wider">WELCOME10</strong></span>
+      </div>
+
+      <header className="sticky top-0 z-40 border-b border-[#e5dfd5] bg-[#faf8f5]/95 backdrop-blur-md">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-18 items-center justify-between gap-4">
+            
+            {/* Left: Mobile hamburger & primary categories */}
+            <div className="flex items-center gap-6">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                className="p-1.5 text-[#171614] transition hover:text-[#8b5a42] lg:hidden"
+                aria-label="Open navigation menu"
               >
-                {cat.label}
-              </Link>
-            ))}
-            <Link
-              href="/products?sale=1"
-              className="rounded-full px-4 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
-            >
-              Sale
-            </Link>
-            <Link
-              href="/track"
-              className="rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-900"
-            >
-              Track order
-            </Link>
-            <Link
-              href="/wishlist"
-              className="rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-900"
-            >
-              Wishlist
-            </Link>
-            {user ? (
-              <div className="relative" ref={menuRef}>
-                <button
-                  type="button"
-                  onClick={() => setMenuOpen((o) => !o)}
-                  className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-900"
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              </button>
+
+              <nav className="hidden items-center gap-7 lg:flex" aria-label="Storefront Categories">
+                <Link
+                  href="/products?category=women"
+                  className="text-xs font-medium tracking-[0.12em] uppercase text-[#3a3733] transition hover:text-[#171614]"
                 >
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 text-[11px] font-bold text-white">
-                    {user.name.charAt(0).toUpperCase()}
-                  </span>
-                  {user.name.split(" ")[0]}
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </button>
-                {menuOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
-                    <div className="border-b border-neutral-100 px-4 py-3">
-                      <p className="truncate text-sm font-semibold">{user.name}</p>
-                      <p className="truncate text-xs text-neutral-500">{user.email}</p>
+                  Women
+                </Link>
+                <Link
+                  href="/products?category=men"
+                  className="text-xs font-medium tracking-[0.12em] uppercase text-[#3a3733] transition hover:text-[#171614]"
+                >
+                  Men
+                </Link>
+                <Link
+                  href="/products?category=kids"
+                  className="text-xs font-medium tracking-[0.12em] uppercase text-[#3a3733] transition hover:text-[#171614]"
+                >
+                  Kids
+                </Link>
+                <Link
+                  href="/products?sort=newest"
+                  className="text-xs font-medium tracking-[0.12em] uppercase text-[#3a3733] transition hover:text-[#171614]"
+                >
+                  New Arrivals
+                </Link>
+                <Link
+                  href="/products?sale=1"
+                  className="text-xs font-medium tracking-[0.12em] uppercase text-[#8b5a42] transition hover:text-[#6f4430]"
+                >
+                  Sale
+                </Link>
+              </nav>
+            </div>
+
+            {/* Center: Brand Wordmark */}
+            <div className="text-center">
+              <Link
+                href="/"
+                className="font-serif text-xl sm:text-2xl font-normal tracking-[0.24em] uppercase text-[#171614] hover:opacity-90 transition"
+              >
+                Nova Threads
+              </Link>
+            </div>
+
+            {/* Right: Search, Account, Wishlist, Cart */}
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="hidden sm:block">
+                <SearchBar />
+              </div>
+
+              {/* Account Dropdown */}
+              <div className="relative" ref={accountRef}>
+                {user ? (
+                  <button
+                    type="button"
+                    onClick={() => setAccountMenuOpen((o) => !o)}
+                    className="flex items-center gap-1.5 p-2 text-[#2b2824] transition hover:text-[#171614]"
+                    aria-label="Account menu"
+                    aria-expanded={accountMenuOpen}
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 0115 0" />
+                    </svg>
+                    <span className="hidden text-xs font-medium tracking-wider xl:inline">
+                      {user.name.split(" ")[0]}
+                    </span>
+                  </button>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="flex items-center gap-1.5 p-2 text-[#2b2824] transition hover:text-[#171614]"
+                    aria-label="Sign in"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 0115 0" />
+                    </svg>
+                    <span className="hidden text-xs font-medium tracking-[0.08em] uppercase xl:inline">
+                      Sign In
+                    </span>
+                  </Link>
+                )}
+
+                {/* Account Menu Popup */}
+                {accountMenuOpen && user && (
+                  <div className="absolute right-0 top-full z-50 mt-2 w-56 border border-[#e5dfd5] bg-[#faf8f5] shadow-lg py-2">
+                    <div className="border-b border-[#e5dfd5] px-4 py-2.5">
+                      <p className="truncate text-xs font-semibold uppercase tracking-wider text-[#171614]">{user.name}</p>
+                      <p className="truncate text-[11px] text-[#6b645b]">{user.email}</p>
                     </div>
                     <Link
                       href="/account"
-                      onClick={() => setMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="block px-4 py-2 text-xs text-[#2b2824] hover:bg-[#f2ece2] transition"
                     >
-                      🧾 My orders
+                      Orders &amp; History
                     </Link>
                     <Link
                       href="/account?tab=addresses"
-                      onClick={() => setMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="block px-4 py-2 text-xs text-[#2b2824] hover:bg-[#f2ece2] transition"
                     >
-                      📍 Saved addresses
+                      Saved Addresses
+                    </Link>
+                    <Link
+                      href="/track"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="block px-4 py-2 text-xs text-[#2b2824] hover:bg-[#f2ece2] transition"
+                    >
+                      Track Shipment
+                    </Link>
+                    <Link
+                      href="/admin"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="block px-4 py-2 text-xs text-[#2b2824] hover:bg-[#f2ece2] transition border-t border-[#e5dfd5]"
+                    >
+                      Store Admin
                     </Link>
                     <button
                       type="button"
                       onClick={() => {
-                        setMenuOpen(false);
+                        setAccountMenuOpen(false);
                         void logout();
                       }}
-                      className="block w-full px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50"
+                      className="block w-full px-4 py-2 text-left text-xs font-medium text-[#8b5a42] hover:bg-[#f2ece2] transition border-t border-[#e5dfd5]"
                     >
-                      Log out
+                      Sign Out
                     </button>
                   </div>
                 )}
               </div>
-            ) : (
-              <Link
-                href="/login"
-                className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-900"
-              >
-                <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 0115 0" />
-                </svg>
-                Login
-              </Link>
-            )}
-          </nav>
 
-          {/* Right: search + cart */}
-          <div className="flex items-center gap-2">
-            <div className="hidden md:block">
-              <SearchBar />
-            </div>
-            <Link
-              href="/admin"
-              className="relative rounded-md p-2 text-neutral-700 transition hover:bg-neutral-100"
-              aria-label="Admin Panel"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.054-2.066.05A5.38 5.38 0 014.5 10.5v-3.5a5.38 5.38 0 013.774-5.39 36.19 36.19 0 017.452 0A5.38 5.38 0 0119.5 7v3.5a5.38 5.38 0 01-3.774 5.39 36.32 36.32 0 01-2.066-.05m-3.32 0v5.61m0 0a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" />
-              </svg>
-            </Link>
-            <button
-              type="button"
-              onClick={openCart}
-              className="relative rounded-md p-2 text-neutral-700 transition hover:bg-neutral-100"
-              aria-label={`Open cart${hydrated && count > 0 ? ` (${count} items)` : ""}`}
-            >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.8}
+              {/* Wishlist Link with Live Counter */}
+              <Link
+                href="/wishlist"
+                className="relative p-2 text-[#2b2824] transition hover:text-[#171614]"
+                aria-label={`Saved items (${wishlistHydrated ? wishlistCount : 0})`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z"
-                />
-              </svg>
-              {hydrated && count > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral-900 px-1 text-[11px] font-semibold text-white">
-                  {count > 99 ? "99+" : count}
-                </span>
-              )}
-            </button>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                </svg>
+                {wishlistHydrated && wishlistCount > 0 && (
+                  <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#8b5a42] px-1 text-[10px] font-medium text-[#faf8f5]">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Shopping Bag with Live Counter */}
+              <button
+                type="button"
+                onClick={openCart}
+                className="relative p-2 text-[#2b2824] transition hover:text-[#171614]"
+                aria-label={`Open shopping bag${cartHydrated && cartCount > 0 ? ` (${cartCount} items)` : ""}`}
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+                </svg>
+                {cartHydrated && cartCount > 0 && (
+                  <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#171614] px-1 text-[10px] font-semibold text-[#faf8f5]">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Mobile nav panel */}
+      {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="border-t border-neutral-200 bg-white lg:hidden">
-          <div className="space-y-1 px-4 py-3">
-            {CATEGORIES.map((cat) => (
-              <Link
-                key={cat.value}
-                href={cat.value === "all" ? "/products" : `/products?category=${cat.value}`}
+        <div className="fixed inset-0 z-50 flex lg:hidden" role="dialog" aria-modal="true">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className="relative flex w-full max-w-xs flex-1 flex-col bg-[#faf8f5] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#e5dfd5] px-6 py-5">
+              <span className="font-serif text-lg tracking-[0.2em] uppercase text-[#171614]">
+                Nova Threads
+              </span>
+              <button
+                type="button"
                 onClick={() => setMobileOpen(false)}
-                className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+                className="p-1 text-[#615a51] hover:text-[#171614]"
+                aria-label="Close navigation"
               >
-                {cat.label}
-              </Link>
-            ))}
-            <Link
-              href="/products?sale=1"
-              onClick={() => setMobileOpen(false)}
-              className="block rounded-md px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50"
-            >
-              Sale
-            </Link>
-            <Link
-              href="/track"
-              onClick={() => setMobileOpen(false)}
-              className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-            >
-              Track order
-            </Link>
-            <Link
-              href="/wishlist"
-              onClick={() => setMobileOpen(false)}
-              className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-            >
-              Wishlist
-            </Link>
-            {user ? (
-              <>
-                <Link
-                  href="/account"
-                  onClick={() => setMobileOpen(false)}
-                  className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-                >
-                  My account ({user.name.split(" ")[0]})
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileOpen(false);
-                    void logout();
-                  }}
-                  className="block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50"
-                >
-                  Log out
-                </button>
-              </>
-            ) : (
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-100"
-              >
-                Login / Sign up
-              </Link>
-            )}
-            <Link
-              href="/admin"
-              onClick={() => setMobileOpen(false)}
-              className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-            >
-              Admin Panel
-            </Link>
-            <Link
-              href="/support"
-              onClick={() => setMobileOpen(false)}
-              className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-            >
-              Support
-            </Link>
-            <div className="px-3 pt-2 md:hidden">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="border-b border-[#e5dfd5] px-6 py-4">
               <SearchBar />
+            </div>
+
+            <nav className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#8c857b] font-medium mb-3">
+                  Collections
+                </p>
+                <div className="space-y-3">
+                  <Link
+                    href="/products?category=women"
+                    onClick={() => setMobileOpen(false)}
+                    className="block font-serif text-xl text-[#171614] hover:text-[#8b5a42] transition"
+                  >
+                    Women
+                  </Link>
+                  <Link
+                    href="/products?category=men"
+                    onClick={() => setMobileOpen(false)}
+                    className="block font-serif text-xl text-[#171614] hover:text-[#8b5a42] transition"
+                  >
+                    Men
+                  </Link>
+                  <Link
+                    href="/products?category=kids"
+                    onClick={() => setMobileOpen(false)}
+                    className="block font-serif text-xl text-[#171614] hover:text-[#8b5a42] transition"
+                  >
+                    Kids
+                  </Link>
+                  <Link
+                    href="/products?sort=newest"
+                    onClick={() => setMobileOpen(false)}
+                    className="block font-serif text-xl text-[#171614] hover:text-[#8b5a42] transition"
+                  >
+                    New Arrivals
+                  </Link>
+                  <Link
+                    href="/products?sale=1"
+                    onClick={() => setMobileOpen(false)}
+                    className="block font-serif text-xl text-[#8b5a42] transition"
+                  >
+                    The Sale Edit
+                  </Link>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-[#e5dfd5]">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#8c857b] font-medium mb-3">
+                  Account &amp; Orders
+                </p>
+                <div className="space-y-2.5 text-sm text-[#3a3733]">
+                  {user ? (
+                    <>
+                      <Link
+                        href="/account"
+                        onClick={() => setMobileOpen(false)}
+                        className="block hover:text-[#171614]"
+                      >
+                        My Account ({user.name.split(" ")[0]})
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          void logout();
+                        }}
+                        className="block text-left text-[#8b5a42]"
+                      >
+                        Sign Out
+                      </button>
+                    </>
+                  ) : (
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="block font-medium text-[#171614]"
+                    >
+                      Sign In / Register
+                    </Link>
+                  )}
+                  <Link
+                    href="/wishlist"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-between hover:text-[#171614]"
+                  >
+                    <span>Saved Items</span>
+                    {wishlistHydrated && wishlistCount > 0 && (
+                      <span className="text-xs text-[#8b5a42]">({wishlistCount})</span>
+                    )}
+                  </Link>
+                  <Link
+                    href="/track"
+                    onClick={() => setMobileOpen(false)}
+                    className="block hover:text-[#171614]"
+                  >
+                    Track Shipment
+                  </Link>
+                  <Link
+                    href="/support"
+                    onClick={() => setMobileOpen(false)}
+                    className="block hover:text-[#171614]"
+                  >
+                    Client Services &amp; FAQs
+                  </Link>
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileOpen(false)}
+                    className="block hover:text-[#171614] pt-2 text-xs text-[#8c857b]"
+                  >
+                    Store Admin Dashboard
+                  </Link>
+                </div>
+              </div>
+            </nav>
+
+            <div className="border-t border-[#e5dfd5] bg-[#f5f0e8] px-6 py-4 text-xs text-[#736c62]">
+              <p>Complimentary shipping over ₹999</p>
+              <p className="mt-1">Standard 3–5 day delivery across India</p>
             </div>
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

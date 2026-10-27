@@ -1,55 +1,66 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SUPPORT_SECTIONS, SUPPORT_CONTACT } from "@/content/support";
 
 export const metadata: Metadata = {
-  title: "Support — Nova Threads",
+  title: "Client Care & Editorial Policies — Nova Threads",
   description:
-    "Shipping & returns, size guide, contact and FAQs for Nova Threads.",
+    "Shipping & returns, size guide, contact assistance, and FAQs for Nova Threads clothing.",
 };
 
 export default function SupportPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-      <h1 className="text-3xl font-bold">Support</h1>
-      <p className="mt-2 text-sm text-neutral-500">
-        Everything about shipping, sizing, and getting help with your order.
-      </p>
+    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+      {/* Title */}
+      <div className="border-b border-[#e5dfd5] pb-6">
+        <span className="text-[10px] font-semibold tracking-[0.24em] uppercase text-[#8b5a42]">
+          Assistance &amp; Guidelines
+        </span>
+        <h1 className="mt-1 font-serif text-3xl sm:text-4xl text-[#171614]">
+          Client Care &amp; Store Policies
+        </h1>
+        <p className="mt-2 text-xs sm:text-sm text-[#615a51] leading-relaxed">
+          Comprehensive guidance on sizing proportions, domestic shipping timelines, care recommendations, and customer support.
+        </p>
+      </div>
 
-      {/* Section nav */}
-      <nav className="mt-8 flex flex-wrap gap-2">
+      {/* Section Quick Navigation */}
+      <nav aria-label="Support sections" className="mt-8 flex flex-wrap gap-2">
         {SUPPORT_SECTIONS.map((s) => (
           <a
             key={s.id}
             href={`#${s.id}`}
-            className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100"
+            className="border border-[#ded7ca] bg-white px-3.5 py-1.5 text-xs font-medium tracking-wider uppercase text-[#544e45] hover:border-[#171614] hover:text-[#171614] transition"
           >
             {s.title}
           </a>
         ))}
-        <a
+        <Link
           href="/track"
-          className="rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700"
+          className="border border-[#171614] bg-[#171614] px-4 py-1.5 text-xs font-semibold tracking-wider uppercase text-white hover:bg-[#33302b] transition"
         >
-          Track an order →
-        </a>
+          Track Shipment →
+        </Link>
       </nav>
 
-      {/* Sections */}
-      <div className="mt-12 space-y-12">
+      {/* Content Sections */}
+      <div className="mt-12 space-y-16">
         {SUPPORT_SECTIONS.map((s) => (
-          <section key={s.id} id={s.id} className="scroll-mt-24">
-            <h2 className="text-xl font-bold">{s.title}</h2>
-            <div className="mt-4 space-y-3">
+          <section key={s.id} id={s.id} className="scroll-mt-24 border-t border-[#ede6da] pt-8">
+            <h2 className="font-serif text-2xl text-[#171614]">{s.title}</h2>
+            <div className="mt-5 space-y-4">
               {s.body.map((entry, i) => {
                 if (entry.startsWith("Q:")) {
                   const [q, ...rest] = entry.split("\n");
                   return (
                     <div
                       key={i}
-                      className="rounded-xl border border-neutral-200 p-4"
+                      className="border border-[#e5dfd5] bg-[#faf8f5] p-5 text-xs"
                     >
-                      <p className="font-medium">{q.slice(2).trim()}</p>
-                      <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+                      <p className="font-serif text-sm font-medium text-[#171614]">
+                        {q.slice(2).trim()}
+                      </p>
+                      <p className="mt-2 leading-relaxed text-[#544e45]">
                         {rest.join("\n").replace(/^A:\s*/, "")}
                       </p>
                     </div>
@@ -58,7 +69,7 @@ export default function SupportPage() {
                 return (
                   <p
                     key={i}
-                    className="text-sm leading-relaxed text-neutral-600 whitespace-pre-line"
+                    className="text-xs sm:text-sm leading-relaxed text-[#544e45] whitespace-pre-line"
                   >
                     {entry}
                   </p>
@@ -69,17 +80,19 @@ export default function SupportPage() {
         ))}
       </div>
 
-      <div className="mt-14 rounded-2xl bg-neutral-50 p-6 text-sm text-neutral-600">
-        <p className="font-semibold text-neutral-900">Need a hand?</p>
-        <p className="mt-2">
-          Email us at{" "}
+      {/* Help Banner */}
+      <div className="mt-16 border border-[#ded7ca] bg-[#f7f4ee] p-6 text-xs text-[#544e45]">
+        <p className="font-serif text-base text-[#171614]">Direct Client Assistance</p>
+        <p className="mt-2 leading-relaxed">
+          For specialized sizing consultations or order changes, email our studio at{" "}
           <a
-            className="underline underline-offset-4"
+            className="text-[#171614] font-medium underline underline-offset-2 hover:text-[#8b5a42]"
             href={`mailto:${SUPPORT_CONTACT.email}`}
           >
             {SUPPORT_CONTACT.email}
           </a>{" "}
-          or WhatsApp {SUPPORT_CONTACT.whatsapp} ({SUPPORT_CONTACT.hours}).
+          or WhatsApp{" "}
+          <strong className="text-[#171614]">{SUPPORT_CONTACT.whatsapp}</strong> ({SUPPORT_CONTACT.hours}).
         </p>
       </div>
     </div>

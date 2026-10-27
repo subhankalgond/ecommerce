@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/cart-provider";
 import { WishlistProvider } from "@/components/wishlist-provider";
@@ -9,23 +9,33 @@ import Footer from "@/components/footer";
 import CartDrawer from "@/components/cart-drawer";
 import BottomNav from "@/components/bottom-nav";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
-    default: "Nova Threads — Clothing for Men, Women & Kids",
+    default: "Nova Threads — Editorial Fashion & Everyday Wardrobe Essentials",
     template: "%s | Nova Threads",
   },
   description:
-    "Everyday essentials for the whole family. Shirts, dresses, knitwear and more — crafted to last, priced to love. Checkout powered by Stripe.",
+    "Everyday, considered. Thoughtful essentials for men, women and kids. Made for the way you live.",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} font-sans`}>
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+      <body className="min-h-screen bg-[#faf8f5] text-[#171614] font-sans selection:bg-[#ede6da]">
         <CustomerProvider>
           <CartProvider>
             <WishlistProvider>

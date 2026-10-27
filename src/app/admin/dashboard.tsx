@@ -72,7 +72,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "inventory", label: "Inventory" },
   { id: "customers", label: "Customers" },
   { id: "coupons", label: "Coupons" },
-  { id: "settings", label: "Settings ⚙️" },
+  { id: "settings", label: "Settings" },
 ];
 
 interface Stats {
@@ -152,8 +152,12 @@ function LoginGate({
 
   return (
     <div className="mx-auto flex max-w-sm flex-col items-center px-4 py-24">
-      <p className="text-4xl">🛠️</p>
-      <h1 className="mt-4 text-2xl font-bold">Admin sign in</h1>
+      <div className="flex h-12 w-12 items-center justify-center border border-neutral-300 bg-neutral-100 text-neutral-800">
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 00-2.25 2.25z" />
+        </svg>
+      </div>
+      <h1 className="mt-4 font-serif text-2xl font-normal text-neutral-900 tracking-tight">Admin Portal</h1>
       <p className="mt-2 text-center text-sm text-neutral-500">
         Staff access only — customers sign in at{" "}
         <Link href="/login" className="font-semibold underline underline-offset-2">
@@ -653,10 +657,14 @@ export default function AdminDashboard({
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="mt-16 text-center">
-              <p className="text-4xl">📦</p>
-              <p className="mt-3 text-lg font-medium">
-                {all.length === 0 ? "No orders yet" : "No orders match this filter"}
+            <div className="mt-16 flex flex-col items-center justify-center text-center">
+              <div className="flex h-12 w-12 items-center justify-center border border-neutral-300 bg-neutral-100 text-neutral-500">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+              </div>
+              <p className="mt-3 text-lg font-medium text-neutral-800">
+                {all.length === 0 ? "No orders recorded yet" : "No orders match this filter"}
               </p>
             </div>
           ) : (

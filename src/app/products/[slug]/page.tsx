@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -28,7 +27,7 @@ export async function generateMetadata({
   const product = getProductBySlug(slug);
   if (!product) return { title: "Product not found" };
   return {
-    title: product.name,
+    title: `${product.name} — Nova Threads`,
     description: product.description,
   };
 }
@@ -46,27 +45,28 @@ export default async function ProductPage({
   const inStock = stock === null || stock > 0;
   const lowStock = stock !== null && stock > 0 && stock <= 5;
 
-  const onSale = product.compareAtPrice !== undefined;
+  const onSale = product.compareAtPrice !== undefined && product.compareAtPrice > product.price;
   const categoryLabel =
     product.category === "kids" ? "Kids" : `${product.category === "men" ? "Men" : "Women"}`;
 
-  // Related products: same category, exclude self
+  // Related products from the same category
   const related = allProducts()
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
-  // Reviews (server-rendered)
+  // Reviews
   const reviews = listReviews(product.id);
   const summary = reviewSummary(product.id);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <script dangerouslySetInnerHTML={{ __html: recordViewScript(product.slug) }} />
-      {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="text-sm text-neutral-500">
-        <ol className="flex flex-wrap items-center gap-1.5">
+      
+      {/* Editorial Breadcrumbs */}
+      <nav aria-label="Breadcrumbs" className="text-xs text-[#8c857b]">
+        <ol className="flex flex-wrap items-center gap-2">
           <li>
-            <Link href="/" className="hover:text-neutral-900 hover:underline">
+            <Link href="/" className="hover:text-[#171614] transition">
               Home
             </Link>
           </li>
@@ -74,146 +74,167 @@ export default async function ProductPage({
           <li>
             <Link
               href={`/products?category=${product.category}`}
-              className="capitalize hover:text-neutral-900 hover:underline"
+              className="capitalize hover:text-[#171614] transition"
             >
               {categoryLabel}
             </Link>
           </li>
           <li aria-hidden="true">/</li>
-          <li aria-current="page" className="font-medium text-neutral-900">
+          <li aria-current="page" className="font-medium text-[#171614]">
             {product.name}
           </li>
         </ol>
       </nav>
 
-      <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-2">
-        {/* Gallery */}
-        <ProductGallery image={product.image} alt={product.name} onSale={onSale} />
+      {/* Main Product Showcase */}
+      <div className="mt-8 grid grid-cols-1 gap-12 lg:grid-cols-12">
+        
+        {/* Left Column: Gallery (7 Cols on desktop) */}
+        <div className="lg:col-span-7">
+          <ProductGallery image={product.image} alt={product.name} onSale={onSale} />
+        </div>
 
-        {/* Details */}
-        <div className="flex flex-col">
-          <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
-            {categoryLabel}
-          </p>
-          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">{product.name}</h1>
+        {/* Right Column: Narrative, Variants & Actions (5 Cols on desktop) */}
+        <div className="flex flex-col lg:col-span-5">
+          <div className="border-b border-[#e5dfd5] pb-6">
+            <span className="text-[10px] font-semibold tracking-[0.24em] uppercase text-[#8b5a42]">
+              {categoryLabel}&apos;s Wardrobe · SKU NT-{product.id.toUpperCase()}
+            </span>
+            <h1 className="mt-2 font-serif text-3xl sm:text-4xl text-[#171614] leading-tight">
+              {product.name}
+            </h1>
 
-          {/* Ratings summary */}
-          {summary.count > 0 && (
-            <p className="mt-2 flex items-center gap-2 text-sm">
-              <span className="text-amber-500" aria-hidden>
-                {"★".repeat(Math.round(summary.average))}
-                <span className="text-neutral-300">
-                  {"★".repeat(5 - Math.round(summary.average))}
+            {/* Ratings summary */}
+            {summary.count > 0 && (
+              <p className="mt-2.5 flex items-center gap-2 text-xs text-[#615a51]">
+                <span className="text-[#8b5a42] tracking-widest">
+                  {"★".repeat(Math.round(summary.average))}
+                  <span className="text-[#d5cebf]">{"★".repeat(5 - Math.round(summary.average))}</span>
                 </span>
-              </span>
-              <span className="text-neutral-600">
-                {summary.average} · {summary.count} review{summary.count === 1 ? "" : "s"}
-              </span>
-            </p>
-          )}
-
-          <div className="mt-4 flex items-baseline gap-3">
-            <p className="text-2xl font-bold">{formatPrice(product.price)}</p>
-            {onSale && product.compareAtPrice && (
-              <>
-                <p className="text-lg text-neutral-400 line-through">
-                  {formatPrice(product.compareAtPrice)}
-                </p>
-                <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-600">
-                  Save {formatPrice(product.compareAtPrice - product.price)}
+                <span>
+                  {summary.average} · {summary.count} review{summary.count === 1 ? "" : "s"}
                 </span>
-              </>
+              </p>
             )}
+
+            {/* Pricing */}
+            <div className="mt-4 flex items-baseline gap-3">
+              <span className="text-xl sm:text-2xl font-bold text-[#171614]">
+                {formatPrice(product.price)}
+              </span>
+              {onSale && product.compareAtPrice && (
+                <>
+                  <span className="text-sm text-[#9c958a] line-through">
+                    {formatPrice(product.compareAtPrice)}
+                  </span>
+                  <span className="border border-[#8b5a42] bg-[#faf8f5] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#8b5a42]">
+                    Save {formatPrice(product.compareAtPrice - product.price)}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Stock status indicator */}
+            <div className="mt-3 text-xs">
+              {inStock ? (
+                lowStock ? (
+                  <span className="text-[#8b5a42] font-medium">
+                    Limited Availability · Only {stock} pieces remaining
+                  </span>
+                ) : (
+                  <span className="text-[#515c4d] font-medium">
+                    ✓ Available for immediate dispatch
+                  </span>
+                )
+              ) : (
+                <span className="text-[#8b5a42] font-semibold">
+                  Archival Piece · Currently Out of Stock
+                </span>
+              )}
+            </div>
           </div>
 
-          <p className="mt-6 leading-relaxed text-neutral-600">
-            {product.description}
-          </p>
+          {/* Description */}
+          <div className="py-6 border-b border-[#e5dfd5]">
+            <p className="text-xs sm:text-sm leading-relaxed text-[#544e45]">
+              {product.description}
+            </p>
+          </div>
 
-          {/* Stock availability */}
-          <p className="mt-4 text-sm">
-            {inStock ? (
-              lowStock ? (
-                <span className="font-medium text-amber-600">
-                  ⚠ Only {stock} left in stock — order soon
-                </span>
-              ) : (
-                <span className="font-medium text-emerald-600">✓ In stock</span>
-              )
-            ) : (
-              <span className="font-medium text-rose-600">✗ Out of stock</span>
-            )}
-          </p>
-
-          <div className="mt-8">
+          {/* Variants and Add to Cart Section */}
+          <div className="py-6 border-b border-[#e5dfd5]">
             <AddToCart product={product} inStock={inStock} />
           </div>
 
-          {/* Delivery / pincode check */}
-          <div className="mt-6">
+          {/* Postal Code Dispatch Checker */}
+          <div className="py-6 border-b border-[#e5dfd5]">
             <PincodeCheck />
           </div>
 
-          {/* Product details */}
-          <div className="mt-10 border-t border-neutral-200 pt-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide">
-              Specifications
+          {/* Garment Specifications & Details */}
+          <div className="pt-6">
+            <h2 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#8c857b] mb-4">
+              Garment Specifications &amp; Care
             </h2>
-            <ul className="mt-3 space-y-2 text-sm text-neutral-600">
-              <li className="flex justify-between gap-4">
-                <span>Colours</span>
-                <span className="text-right text-neutral-900">
-                  {product.colors.join(", ")}
-                </span>
-              </li>
-              <li className="flex justify-between gap-4">
-                <span>Available sizes</span>
-                <span className="text-right text-neutral-900">
-                  {product.sizes.join(", ")}
-                </span>
-              </li>
-              <li className="flex justify-between gap-4">
-                <span>SKU</span>
-                <span className="text-right font-mono text-neutral-900">
-                  NT-{product.id.toUpperCase()}
-                </span>
-              </li>
-              <li className="flex justify-between gap-4">
-                <span>Delivery</span>
-                <span className="text-right text-neutral-900">
-                  3–5 business days · free over ₹999
-                </span>
-              </li>
-              <li className="flex justify-between gap-4">
-                <span>Returns</span>
-                <span className="text-right text-neutral-900">
-                  30-day free returns
-                </span>
-              </li>
-            </ul>
+            <dl className="divide-y divide-[#ede6da] text-xs">
+              <div className="flex justify-between py-2">
+                <dt className="text-[#736c62]">Available Colours</dt>
+                <dd className="font-medium text-[#171614]">{product.colors.join(", ")}</dd>
+              </div>
+              <div className="flex justify-between py-2">
+                <dt className="text-[#736c62]">Standard Sizing</dt>
+                <dd className="font-medium text-[#171614]">{product.sizes.join(", ")}</dd>
+              </div>
+              <div className="flex justify-between py-2">
+                <dt className="text-[#736c62]">Domestic Delivery</dt>
+                <dd className="font-medium text-[#171614]">3–5 business days · Complimentary over ₹999</dd>
+              </div>
+              <div className="flex justify-between py-2">
+                <dt className="text-[#736c62]">Returns &amp; Exchanges</dt>
+                <dd className="font-medium text-[#171614]">30-day effortless doorstep return service</dd>
+              </div>
+              <div className="flex justify-between py-2">
+                <dt className="text-[#736c62]">Care Recommendation</dt>
+                <dd className="font-medium text-[#171614]">Cold delicate wash with mild detergent; line dry in shade</dd>
+              </div>
+            </dl>
           </div>
+
         </div>
       </div>
 
-      {/* Reviews */}
-      <section className="mt-16 border-t border-neutral-200 pt-10">
+      {/* Customer Reviews Section */}
+      <section className="mt-20 border-t border-[#e5dfd5] pt-12">
         <ProductReviews productId={product.id} initialReviews={reviews} summary={summary} />
       </section>
 
-      {/* Related products */}
+      {/* Related Products / Curated Companions */}
       {related.length > 0 && (
-        <section className="mt-16 border-t border-neutral-200 pt-10">
-          <h2 className="text-2xl font-bold">You may also like</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            More from {categoryLabel}&apos;s collection.
-          </p>
-          <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
+        <section className="mt-20 border-t border-[#e5dfd5] pt-12">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <span className="text-[10px] font-semibold tracking-[0.24em] uppercase text-[#8b5a42]">
+                Complete The Look
+              </span>
+              <h2 className="mt-1 font-serif text-2xl sm:text-3xl text-[#171614]">
+                Related From The {categoryLabel} Edit
+              </h2>
+            </div>
+            <Link
+              href={`/products?category=${product.category}`}
+              className="text-xs font-semibold tracking-wider uppercase text-[#171614] hover:text-[#8b5a42] transition"
+            >
+              Explore {categoryLabel}&apos;s Collection →
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-4">
             {related.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
         </section>
       )}
+
     </div>
   );
 }

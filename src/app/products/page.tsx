@@ -2,23 +2,25 @@ import { Suspense } from "react";
 import Catalog from "./catalog";
 
 export const metadata = {
-  title: "Shop all",
+  title: "Complete Catalogue — Nova Threads",
   description:
-    "Browse clothing for men, women and kids — filter by category, sort by price and more.",
+    "Explore thoughtful wardrobe essentials for men, women and kids. Designed with enduring natural fabrics.",
 };
 
 export default function ProductsPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <div className="h-8 w-40 animate-pulse rounded bg-neutral-200" />
-          <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="h-10 w-64 animate-pulse bg-[#ede8df]" />
+          <div className="mt-4 h-4 w-96 animate-pulse bg-[#ede8df]" />
+          <div className="mt-12 grid grid-cols-2 gap-x-5 gap-y-12 sm:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i}>
-                <div className="aspect-square animate-pulse rounded-xl bg-neutral-200" />
-                <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-neutral-200" />
-                <div className="mt-2 h-4 w-1/3 animate-pulse rounded bg-neutral-200" />
+              <div key={i} className="flex flex-col">
+                <div className="aspect-[3/4] w-full animate-pulse bg-[#ede8df]" />
+                <div className="mt-3 h-3 w-16 animate-pulse bg-[#ede8df]" />
+                <div className="mt-2 h-4 w-3/4 animate-pulse bg-[#ede8df]" />
+                <div className="mt-2 h-3.5 w-1/3 animate-pulse bg-[#ede8df]" />
               </div>
             ))}
           </div>

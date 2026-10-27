@@ -8,9 +8,9 @@ export default function NewsletterForm() {
 
   if (joined) {
     return (
-      <p className="mt-3 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-        Thanks for subscribing! 🎉
-      </p>
+      <div className="mt-3 border border-[#c9c2b5] bg-[#f5f1ea] px-3 py-2 text-xs text-[#2c2925]">
+        Thank you for subscribing to Nova Threads Journal.
+      </div>
     );
   }
 
@@ -27,14 +27,15 @@ export default function NewsletterForm() {
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="you@example.com"
-        className="w-full min-w-0 rounded-md border border-neutral-300 px-3 py-2 text-sm placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none"
+        placeholder="Enter your email address"
+        aria-label="Email address for newsletter"
+        className="w-full min-w-0 border border-[#e5dfd5] bg-[#faf8f5] px-3 py-2 text-xs text-[#171614] placeholder:text-[#9c958a] focus:border-[#171614] focus:bg-white focus:outline-none transition"
       />
       <button
         type="submit"
-        className="shrink-0 rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700"
+        className="shrink-0 border border-[#171614] bg-[#171614] px-4 py-2 text-xs font-semibold tracking-wider uppercase text-white hover:bg-[#33302b] transition"
       >
-        Join
+        Subscribe
       </button>
     </form>
   );

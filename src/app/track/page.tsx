@@ -50,18 +50,9 @@ const STEP_LABELS: Record<string, string> = {
   placed: "Order Placed",
   confirmed: "Confirmed",
   packed: "Packed",
-  shipped: "Shipped",
-  "out-for-delivery": "Out for Delivery",
+  shipped: "Dispatched",
+  "out-for-delivery": "Out For Delivery",
   delivered: "Delivered",
-};
-const STATUS_STYLES: Record<string, string> = {
-  placed: "bg-amber-100 text-amber-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  packed: "bg-cyan-100 text-cyan-800",
-  shipped: "bg-indigo-100 text-indigo-800",
-  "out-for-delivery": "bg-violet-100 text-violet-800",
-  delivered: "bg-emerald-100 text-emerald-800",
-  cancelled: "bg-rose-100 text-rose-700",
 };
 
 function formatMoney(paise: number, currency: string) {
@@ -103,7 +94,7 @@ function TrackInner() {
       if (!res.ok || !data.order) {
         setOrder(null);
         setEvents([]);
-        setError(data.error ?? "Order lookup failed.");
+        setError(data.error ?? "Order identifier not found in database.");
       } else {
         setOrder(data.order);
         setEvents(data.events ?? []);
@@ -116,9 +107,8 @@ function TrackInner() {
     }
   }, []);
 
-  // Pre-fill from ?order= (success page and notification emails link here)
   useEffect(() => {
-    const pre = searchParams.get("order");
+    const pre = searchParams.get("order") || searchParams.get("id");
     if (pre) {
       setQuery(pre);
       void lookup(pre);
@@ -129,8 +119,8 @@ function TrackInner() {
     if (!order) return;
     const reason = window.prompt(
       action === "cancel"
-        ? "Why are you cancelling this order?"
-        : "Why are you returning this order?"
+        ? "Please share your reason for cancelling:"
+        : "Please share your reason for return:"
     );
     if (!reason) return;
     setError(null);
@@ -143,12 +133,12 @@ function TrackInner() {
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
-        setError(data.error ?? "Action failed.");
+        setError(data.error ?? "Action could not be completed.");
       } else {
         setNotice(
           action === "cancel"
-            ? "Your order has been cancelled. Refunds for prepaid orders are initiated in 3–5 business days."
-            : "Return requested! Our team will pick it up within 2–3 days."
+            ? "Your cancellation has been recorded. Any prepaid balance will be returned in 3–5 business days."
+            : "Return request registered. Our logistics partner will contact you for pickup."
         );
         await lookup(order.id);
       }
@@ -164,15 +154,23 @@ function TrackInner() {
   const canReturn = order?.status === "delivered" && !order.returnStatus;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
-      <h1 className="text-3xl font-bold">Track your order</h1>
-      <p className="mt-2 text-sm text-neutral-500">
-        Enter the order ID from your confirmation (it looks like{" "}
-        <span className="font-mono">NT-4KD9P2</span>) or your payment ID.
-      </p>
+    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+      {/* Title */}
+      <div className="border-b border-[#e5dfd5] pb-6">
+        <span className="text-[10px] font-semibold tracking-[0.24em] uppercase text-[#8b5a42]">
+          Live Logistics Manifest
+        </span>
+        <h1 className="mt-1 font-serif text-3xl sm:text-4xl text-[#171614]">
+          Track Your Shipment
+        </h1>
+        <p className="mt-2 text-xs text-[#6b645b] leading-relaxed">
+          Enter your unique order identifier (e.g. <span className="font-mono text-[#171614]">NT-4KD9P2</span>) or payment reference.
+        </p>
+      </div>
 
+      {/* Query Form */}
       <form
-        className="mt-8 flex gap-2"
+        className="mt-6 flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           void lookup(query);
@@ -181,77 +179,70 @@ function TrackInner() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="NT-XXXXXX"
-          className="flex-1 rounded-lg border border-neutral-300 px-4 py-3 font-mono text-sm uppercase focus:border-neutral-900 focus:outline-none"
-          aria-label="Order ID"
+          placeholder="NT-XXXXXX or Payment Reference"
+          className="flex-1 border border-[#ded7ca] bg-white px-4 py-3 font-mono text-xs uppercase text-[#171614] placeholder:text-[#9e978e] focus:border-[#171614] focus:outline-none transition"
+          aria-label="Order ID input"
         />
         <button
           type="submit"
           disabled={loading || !query.trim()}
-          className="rounded-lg bg-neutral-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:opacity-50"
+          className="border border-[#171614] bg-[#171614] px-7 py-3 text-xs font-semibold tracking-wider uppercase text-white hover:bg-[#33302b] transition disabled:opacity-50"
         >
-          {loading ? "Looking…" : "Track"}
+          {loading ? "Locating…" : "Track"}
         </button>
       </form>
 
       {error && (
-        <p className="mt-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="mt-4 border border-[#8b5a42] bg-[#fcf9f7] p-3 text-xs text-[#8b5a42] font-medium">
           {error}
-        </p>
+        </div>
       )}
       {notice && (
-        <p className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="mt-4 border border-[#515c4d] bg-[#f5f8f5] p-3 text-xs text-[#384035] font-medium">
           {notice}
-        </p>
+        </div>
       )}
 
+      {/* Result Card */}
       {order && (
-        <div className="mt-8 rounded-2xl border border-neutral-200 p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-8 border border-[#ded7ca] bg-[#faf8f5] p-6 sm:p-8">
+          
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ede6da] pb-4">
             <div>
-              <p className="font-mono text-lg font-bold">{order.id}</p>
-              <p className="text-xs text-neutral-500">
-                Placed{" "}
+              <p className="font-mono text-base font-bold text-[#171614]">{order.id}</p>
+              <p className="mt-0.5 text-[11px] text-[#736c62]">
+                Placed on{" "}
                 {new Date(order.createdAt).toLocaleString("en-IN", {
                   dateStyle: "medium",
                   timeStyle: "short",
                 })}
               </p>
             </div>
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
-                STATUS_STYLES[order.status] ?? "bg-neutral-100 text-neutral-700"
-              }`}
-            >
-              {order.status}
+            <span className="border border-[#171614] bg-[#f5f0e8] px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#171614]">
+              Status: {order.status}
             </span>
           </div>
 
-          {/* Estimated delivery / courier */}
+          {/* Delivery Details */}
           {order.status !== "cancelled" && (
-            <div className="mt-4 space-y-1 rounded-lg bg-neutral-50 p-3 text-sm text-neutral-600">
+            <div className="mt-4 border border-[#ede6da] bg-[#f7f4ee] p-4 text-xs space-y-1.5 text-[#544e45]">
               {order.estimatedDelivery && (
                 <p>
-                  📦 Estimated delivery:{" "}
-                  <span className="font-semibold text-neutral-900">
+                  Estimated arrival:{" "}
+                  <strong className="font-semibold text-[#171614]">
                     {new Date(order.estimatedDelivery).toLocaleDateString("en-IN", {
                       weekday: "short",
                       day: "numeric",
                       month: "short",
                     })}
-                  </span>
+                  </strong>
                 </p>
               )}
               {order.courier && (
                 <p>
-                  🚚 Courier: <span className="font-medium text-neutral-900">{order.courier}</span>
+                  Carrier: <span className="font-medium text-[#171614]">{order.courier}</span>
                   {order.trackingNumber && (
-                    <>
-                      {" "}· Tracking no:{" "}
-                      <span className="font-mono font-medium text-neutral-900">
-                        {order.trackingNumber}
-                      </span>
-                    </>
+                    <> · AWB / Tracking: <span className="font-mono font-medium text-[#171614]">{order.trackingNumber}</span></>
                   )}
                   {order.trackingUrl && (
                     <>
@@ -260,9 +251,9 @@ function TrackInner() {
                         href={order.trackingUrl}
                         target="_blank"
                         rel="noreferrer noopener"
-                        className="font-medium text-blue-600 underline underline-offset-2"
+                        className="font-medium text-[#8b5a42] underline hover:text-[#6f4430]"
                       >
-                        Track shipment ↗
+                        Carrier Portal ↗
                       </a>
                     </>
                   )}
@@ -270,77 +261,76 @@ function TrackInner() {
               )}
               {order.invoiceNumber && (
                 <p>
-                  🧾 Invoice <span className="font-mono">{order.invoiceNumber}</span> ·{" "}
+                  Invoice: <span className="font-mono font-medium text-[#171614]">{order.invoiceNumber}</span> ·{" "}
                   <a
                     href={`/api/invoice?orderId=${encodeURIComponent(order.id)}`}
-                    className="font-medium text-blue-600 underline underline-offset-2"
+                    className="font-medium text-[#8b5a42] underline hover:text-[#6f4430]"
                   >
-                    Download invoice
+                    Download PDF Invoice
                   </a>
                 </p>
               )}
             </div>
           )}
 
-          {/* Progress timeline (cancelled orders skip it) */}
+          {/* Progress Timeline */}
           {order.status !== "cancelled" ? (
-            <ol className="mt-6 flex items-center">
-              {steps.map((step, i) => {
-                const done = i <= stepIndex;
-                return (
-                  <li key={step} className="flex flex-1 items-center last:flex-none">
-                    <div className="flex flex-col items-center">
-                      <span
-                        className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                          done
-                            ? "bg-neutral-900 text-white"
-                            : "bg-neutral-200 text-neutral-500"
-                        }`}
-                      >
-                        {done ? "✓" : i + 1}
-                      </span>
-                      <span
-                        className={`mt-1 whitespace-nowrap text-[10px] ${
-                          done ? "font-semibold text-neutral-900" : "text-neutral-400"
-                        }`}
-                      >
-                        {STEP_LABELS[step] ?? step}
-                      </span>
-                    </div>
-                    {i < steps.length - 1 && (
-                      <div
-                        className={`mx-1.5 mb-5 h-0.5 flex-1 ${
-                          i < stepIndex ? "bg-neutral-900" : "bg-neutral-200"
-                        }`}
-                      />
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
+            <div className="mt-8">
+              <ol className="flex items-center">
+                {steps.map((step, i) => {
+                  const done = i <= stepIndex;
+                  return (
+                    <li key={step} className="flex flex-1 items-center last:flex-none">
+                      <div className="flex flex-col items-center">
+                        <span
+                          className={`flex h-7 w-7 items-center justify-center text-[10px] font-bold border transition ${
+                            done
+                              ? "border-[#171614] bg-[#171614] text-white"
+                              : "border-[#d5cebf] bg-white text-[#8c857b]"
+                          }`}
+                        >
+                          {done ? "✓" : i + 1}
+                        </span>
+                        <span
+                          className={`mt-1.5 whitespace-nowrap text-[9px] uppercase tracking-wider ${
+                            done ? "font-semibold text-[#171614]" : "text-[#9e978e]"
+                          }`}
+                        >
+                          {STEP_LABELS[step] ?? step}
+                        </span>
+                      </div>
+                      {i < steps.length - 1 && (
+                        <div
+                          className={`mx-1 mb-5 h-px flex-1 ${
+                            i < stepIndex ? "bg-[#171614]" : "bg-[#ded7ca]"
+                          }`}
+                        />
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
           ) : (
-            <div className="mt-6 rounded-lg bg-rose-50 p-4 text-sm text-rose-700">
-              <p className="font-semibold">This order was cancelled</p>
+            <div className="mt-6 border border-[#8b5a42] bg-[#fcf9f7] p-4 text-xs text-[#8b5a42]">
+              <p className="font-semibold uppercase tracking-wider">This Order Has Been Cancelled</p>
               {order.cancelReason && <p className="mt-1">Reason: {order.cancelReason}</p>}
             </div>
           )}
 
-          {/* Status history */}
+          {/* Status History Events */}
           {events.length > 0 && (
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm font-medium text-neutral-600">
-                Status history
+            <details className="mt-6 border-t border-[#ede6da] pt-4 text-xs">
+              <summary className="cursor-pointer font-semibold uppercase tracking-wider text-[#8c857b] hover:text-[#171614]">
+                Detailed Milestone Log ({events.length})
               </summary>
-              <ul className="mt-2 space-y-1 border-l-2 border-neutral-200 pl-3 text-xs text-neutral-500">
+              <ul className="mt-3 space-y-2 border-l border-[#ded7ca] pl-3 text-xs text-[#544e45]">
                 {events.map((ev, i) => (
                   <li key={i}>
-                    <span className="font-medium text-neutral-700">{ev.label}</span>
+                    <span className="font-medium text-[#171614]">{ev.label}</span>
                     {ev.note ? ` — ${ev.note}` : ""}{" "}
-                    <span className="text-neutral-400">
-                      {new Date(ev.at).toLocaleString("en-IN", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
+                    <span className="text-[10px] text-[#8c857b] ml-1">
+                      ({new Date(ev.at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })})
                     </span>
                   </li>
                 ))}
@@ -348,105 +338,99 @@ function TrackInner() {
             </details>
           )}
 
-          {/* Items */}
-          <ul className="mt-6 space-y-4 border-t border-neutral-200 pt-6">
+          {/* Items Breakdown */}
+          <ul className="mt-8 divide-y divide-[#ede6da] border-t border-[#ede6da] pt-4">
             {order.items.map((item, i) => (
-              <li key={i} className="flex items-center gap-4">
-                <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-md bg-neutral-100">
+              <li key={i} className="flex items-center gap-4 py-3">
+                <div className="relative aspect-[3/4] h-16 w-12 shrink-0 overflow-hidden bg-[#ede8df] border border-[#e5dfd5]">
                   <Image
                     src={item.image}
                     alt={item.name}
                     fill
                     className="object-cover"
-                    sizes="56px"
+                    sizes="48px"
                   />
                 </div>
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/products/${item.slug}`}
-                    className="truncate text-sm font-medium hover:underline"
+                    className="font-serif text-xs text-[#171614] hover:text-[#8b5a42] transition"
                   >
                     {item.name}
                   </Link>
-                  <p className="text-xs text-neutral-500">
-                    Size {item.size} · Qty {item.qty}
+                  <p className="mt-0.5 text-[11px] text-[#736c62]">
+                    Size: {item.size} · Quantity: {item.qty}
                   </p>
                 </div>
               </li>
             ))}
           </ul>
 
-          <dl className="mt-6 space-y-2 border-t border-neutral-200 pt-4 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-neutral-600">Subtotal</dt>
+          {/* Financial Breakdown */}
+          <dl className="mt-6 space-y-2 border-t border-[#ede6da] pt-4 text-xs">
+            <div className="flex justify-between text-[#615a51]">
+              <dt>Garment Subtotal</dt>
               <dd>{formatMoney(order.subtotal, order.currency)}</dd>
             </div>
             {order.discount > 0 && (
-              <div className="flex justify-between text-emerald-600">
-                <dt>Coupon {order.couponCode}</dt>
+              <div className="flex justify-between text-[#8b5a42] font-medium">
+                <dt>Promotional Code ({order.couponCode})</dt>
                 <dd>−{formatMoney(order.discount, order.currency)}</dd>
               </div>
             )}
-            <div className="flex justify-between">
-              <dt className="text-neutral-600">Shipping</dt>
-              <dd>
-                {order.shipping === 0
-                  ? "Free"
-                  : formatMoney(order.shipping, order.currency)}
-              </dd>
+            <div className="flex justify-between text-[#615a51]">
+              <dt>Shipping</dt>
+              <dd>{order.shipping === 0 ? "Complimentary" : formatMoney(order.shipping, order.currency)}</dd>
             </div>
-            <div className="flex justify-between border-t border-neutral-200 pt-2 text-base font-bold">
-              <dt>Total</dt>
+            <div className="flex justify-between border-t border-[#ded7ca] pt-2 font-serif text-sm font-semibold text-[#171614]">
+              <dt>Total Settled</dt>
               <dd>{formatMoney(order.total, order.currency)}</dd>
             </div>
           </dl>
 
-          <p className="mt-4 text-xs text-neutral-400">
-            {order.paymentMethod === "cod" ? "Cash on Delivery" : "Paid"} via{" "}
-            {order.provider === "stripe" ? "Stripe" : order.provider === "razorpay" ? "Razorpay" : "COD"}
-            {" · "}
-            {order.maskedEmail}
-            {order.shipCity ? ` · shipping to ${order.shipCity}` : ""}
+          <p className="mt-4 text-[11px] text-[#8c857b]">
+            Method: {order.paymentMethod === "cod" ? "Cash on Delivery" : "Online Gateway"} via{" "}
+            {order.provider.toUpperCase()} · Associated email: {order.maskedEmail}
+            {order.shipCity ? ` · Destination: ${order.shipCity}` : ""}
           </p>
 
-          {/* Return / refund status */}
           {order.returnStatus && (
-            <p className="mt-3 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Return {order.returnStatus}
-              {order.refundStatus ? ` · refund ${order.refundStatus}` : ""}
+            <p className="mt-3 border border-[#b8956e] bg-[#fbf8f3] p-2.5 text-xs text-[#7b542c] font-medium">
+              Return status: {order.returnStatus}
+              {order.refundStatus ? ` · Refund: ${order.refundStatus}` : ""}
             </p>
           )}
 
-          {/* Actions */}
-          <div className="mt-5 flex flex-wrap gap-2">
+          {/* Self-Service Actions */}
+          <div className="mt-6 flex flex-wrap gap-3 border-t border-[#ede6da] pt-4">
             {canCancel && (
               <button
                 type="button"
                 onClick={() => void act("cancel")}
-                className="rounded-full border border-rose-200 px-5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                className="border border-[#8b5a42] bg-white px-5 py-2 text-xs font-semibold tracking-wider uppercase text-[#8b5a42] hover:bg-[#8b5a42] hover:text-white transition"
               >
-                Cancel order
+                Cancel Order
               </button>
             )}
             {canReturn && (
               <button
                 type="button"
                 onClick={() => void act("return")}
-                className="rounded-full border border-neutral-300 px-5 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100"
+                className="border border-[#171614] bg-white px-5 py-2 text-xs font-semibold tracking-wider uppercase text-[#171614] hover:bg-[#171614] hover:text-white transition"
               >
-                Request return
+                Request Return
               </button>
             )}
           </div>
         </div>
       )}
 
-      <div className="mt-10 text-center text-sm text-neutral-500">
-        Lost your order ID?{" "}
-        <Link href="/support#contact" className="underline underline-offset-4">
-          Contact support
-        </Link>{" "}
-        with the email you paid with.
+      <div className="mt-12 text-center text-xs text-[#736c62]">
+        Have questions regarding dispatch or sizing?{" "}
+        <Link href="/support#contact" className="underline hover:text-[#171614]">
+          Contact Client Care
+        </Link>
+        .
       </div>
     </div>
   );
@@ -456,8 +440,8 @@ export default function TrackPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
-          <div className="h-10 w-64 animate-pulse rounded bg-neutral-200" />
+        <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="h-8 w-64 animate-pulse bg-[#ede8df]" />
         </div>
       }
     >
