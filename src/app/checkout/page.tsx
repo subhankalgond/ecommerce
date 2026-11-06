@@ -647,8 +647,25 @@ export default function CheckoutPage() {
             )}
 
             {error && (
-              <div className="mt-4 border border-[#8b5a42] bg-[#fcf9f7] p-3 text-xs text-[#8b5a42]">
-                {error}
+              <div className="mt-4 border border-[#8b5a42] bg-[#fcf9f7] p-4 text-xs text-[#8b5a42] space-y-2">
+                <p className="font-medium leading-relaxed">{error}</p>
+                {error.toLowerCase().includes("razorpay") && (
+                  <div className="pt-2 border-t border-[#8b5a42]/20 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] text-[#615a51]">
+                      Or complete your order immediately with doorstep cash:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelected("cod");
+                        setError(null);
+                      }}
+                      className="border border-[#171614] bg-[#171614] px-3.5 py-1 text-[10px] font-semibold tracking-wider uppercase text-white hover:bg-[#33302b] transition"
+                    >
+                      Pay via Cash on Delivery →
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

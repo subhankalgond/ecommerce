@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: var(--font-serif), "Playfair Display", Georgia, Cambria, "Times New Roman", serif;
+  --font-serif: "Playfair Display", Georgia, Cambria, "Times New Roman", serif;
   
   --color-ivory: #faf8f5;
   --color-cream: #f4efe6;
   --color-parchment: #ede6da;
+  --color-sand: #ece5d8;
   --color-stone-line: #e3ddd3;
   --color-charcoal: #171614;
   --color-charcoal-muted: #5e5952;
@@ -29,6 +30,54 @@ body {
 }
 
 ::selection {
-  background-color: #ede6da;
+  background-color: #e5dec9;
   color: #171614;
+}
+
+/* Luxury scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #faf8f5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d9d2c5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b5ac9d;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 35s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

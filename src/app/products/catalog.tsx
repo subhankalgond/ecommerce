@@ -7,8 +7,10 @@ import {
   searchProducts,
   getProductsByCategory,
   type Category,
+  type Product,
 } from "@/lib/products";
 import ProductCard from "@/components/product-card";
+import QuickViewModal from "@/components/quick-view-modal";
 
 type SortKey =
   | "featured"
@@ -57,6 +59,8 @@ export default function Catalog() {
   );
   const [outOfStock, setOutOfStock] = useState<Set<string>>(new Set());
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "editorial">("grid");
 
   useEffect(() => {
     let cancelled = false;
@@ -156,7 +160,13 @@ export default function Catalog() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      
+      {/* Quick View Modal */}
+      <QuickViewModal
+        product={quickViewProduct}
+        isOpen={Boolean(quickViewProduct)}
+        onClose={() => setQuickViewProduct(null)}
+      />
+
       {/* ── Collection Header ────────────────────────────────────────── */}
       <div className="border-b border-[#e5dfd5] pb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -179,6 +189,34 @@ export default function Catalog() {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            {/* View Mode Toggle */}
+            <div className="hidden sm:flex items-center border border-[#ded7ca] bg-[#faf8f5] p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                aria-label="Grid view (4 columns)"
+                className={`p-1.5 transition ${
+                  viewMode === "grid" ? "bg-[#171614] text-white" : "text-[#7a7368] hover:text-[#171614]"
+                }`}
+              >
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h2A1.5 1.5 0 0 1 6 2.5v2A1.5 1.5 0 0 1 4.5 6h-2A1.5 1.5 0 0 1 1 4.5v-2zm8 0A1.5 1.5 0 0 1 10.5 1h2A1.5 1.5 0 0 1 14 2.5v2A1.5 1.5 0 0 1 12.5 6h-2A1.5 1.5 0 0 1 9 4.5v-2zm-8 8A1.5 1.5 0 0 1 2.5 9h2A1.5 1.5 0 0 1 6 10.5v2A1.5 1.5 0 0 1 4.5 14h-2A1.5 1.5 0 0 1 1 12.5v-2zm8 0A1.5 1.5 0 0 1 10.5 9h2a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5h-2A1.5 1.5 0 0 1 9 12.5v-2z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("editorial")}
+                aria-label="Editorial view (2 columns)"
+                className={`p-1.5 transition ${
+                  viewMode === "editorial" ? "bg-[#171614] text-white" : "text-[#7a7368] hover:text-[#171614]"
+                }`}
+              >
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M1 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V3zm7 1v8h5V4H8zm-1 0H3v8h4V4z" />
+                </svg>
+              </button>
+            </div>
+
             {/* Sort Control */}
             <div className="flex items-center gap-2 border border-[#ded7ca] bg-[#faf8f5] px-3 py-2 text-xs">
               <span className="text-[10px] font-semibold tracking-wider uppercase text-[#8c857b]">Sort:</span>
@@ -446,50 +484,57 @@ export default function Catalog() {
           </div>
         </div>
       ) : (
-        <div className="mt-10 grid grid-cols-2 gap-x-5 gap-y-12 sm:grid-cols-3 lg:grid-cols-4">
+        <div
+          className={`mt-10 grid gap-x-6 gap-y-12 ${
+            viewMode === "editorial"
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2"
+              : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+          }`}
+        >
           {sorted.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              aspectRatio={viewMode === "editorial" ? "aspect-[4/5]" : "aspect-[3/4]"}
+              onQuickView={(p) => setQuickViewProduct(p)}
+            />
           ))}
         </div>
       )}
 
-      {/* ── Mobile Filter Drawer ─────────────────────────────────────── */}
+      {/* Mobile Filters Slide-over */}
       {mobileFilterOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 flex justify-end md:hidden" role="dialog" aria-modal="true">
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs"
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs"
             onClick={() => setMobileFilterOpen(false)}
           />
-
-          <div className="relative ml-auto flex w-full max-w-xs flex-col bg-[#faf8f5] shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#e5dfd5] px-5 py-4">
-              <span className="font-serif text-base uppercase tracking-wider text-[#171614]">
-                Filter &amp; Refine
-              </span>
+          <div className="relative flex h-full w-full max-w-xs flex-col bg-[#faf8f5] shadow-2xl p-6">
+            <div className="flex items-center justify-between border-b border-[#e5dfd5] pb-4">
+              <span className="font-serif text-lg text-[#171614]">Refine Catalogue</span>
               <button
                 type="button"
                 onClick={() => setMobileFilterOpen(false)}
-                className="p-1 text-[#615a51]"
+                className="text-[#615a51] hover:text-[#171614]"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                ✕
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-6 text-xs">
+            <div className="mt-6 flex-1 overflow-y-auto space-y-6 text-xs">
               <div>
                 <p className="font-semibold uppercase tracking-wider text-[#8c857b] mb-2">Category</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
                   {CATEGORIES.map((cat) => (
                     <button
                       key={cat.value}
                       type="button"
-                      onClick={() => setParam({ category: cat.value === "all" ? null : cat.value })}
-                      className={`border px-2.5 py-1.5 text-center text-xs uppercase tracking-wider ${
-                        category === cat.value
-                          ? "border-[#171614] bg-[#171614] text-white"
-                          : "border-[#ded7ca] bg-white text-[#544e45]"
+                      onClick={() => {
+                        setParam({ category: cat.value === "all" ? null : cat.value });
+                        setMobileFilterOpen(false);
+                      }}
+                      className={`block w-full text-left py-1 ${
+                        category === cat.value ? "font-bold text-[#8b5a42]" : "text-[#3a3733]"
                       }`}
                     >
                       {cat.label}
@@ -498,104 +543,66 @@ export default function Catalog() {
                 </div>
               </div>
 
-              <div>
+              <div className="border-t border-[#ede6da] pt-4">
                 <p className="font-semibold uppercase tracking-wider text-[#8c857b] mb-2">Size</p>
-                <select
-                  value={sizeParam}
-                  onChange={(e) => setParam({ size: e.target.value || null })}
-                  className="w-full border border-[#ded7ca] bg-white p-2 text-xs text-[#171614]"
-                >
-                  <option value="">Any Size</option>
+                <div className="flex flex-wrap gap-2">
                   {sizes.map((s) => (
-                    <option key={s} value={s}>
-                      Size {s}
-                    </option>
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setParam({ size: sizeParam === s ? null : s });
+                        setMobileFilterOpen(false);
+                      }}
+                      className={`border px-2.5 py-1 text-xs ${
+                        sizeParam === s
+                          ? "border-[#171614] bg-[#171614] text-white"
+                          : "border-[#ded7ca] bg-white text-[#544e45]"
+                      }`}
+                    >
+                      {s}
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
 
-              <div>
-                <p className="font-semibold uppercase tracking-wider text-[#8c857b] mb-2">Colour</p>
-                <select
-                  value={colorParam}
-                  onChange={(e) => setParam({ color: e.target.value || null })}
-                  className="w-full border border-[#ded7ca] bg-white p-2 text-xs text-[#171614]"
-                >
-                  <option value="">Any Colour</option>
-                  {colors.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <p className="font-semibold uppercase tracking-wider text-[#8c857b] mb-2">Price Range</p>
-                <select
-                  value={priceParam}
-                  onChange={(e) => setParam({ price: e.target.value || null })}
-                  className="w-full border border-[#ded7ca] bg-white p-2 text-xs text-[#171614]"
-                >
-                  <option value="">Any Price</option>
+              <div className="border-t border-[#ede6da] pt-4">
+                <p className="font-semibold uppercase tracking-wider text-[#8c857b] mb-2">Price</p>
+                <div className="space-y-1.5">
                   {PRICE_BUCKETS.map((b) => (
-                    <option key={b.id} value={b.id}>
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => {
+                        setParam({ price: priceParam === b.id ? null : b.id });
+                        setMobileFilterOpen(false);
+                      }}
+                      className={`block w-full text-left py-1 ${
+                        priceParam === b.id ? "font-bold text-[#8b5a42]" : "text-[#3a3733]"
+                      }`}
+                    >
                       {b.label}
-                    </option>
+                    </button>
                   ))}
-                </select>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-[#e5dfd5]">
-                <button
-                  type="button"
-                  onClick={() => setParam({ sale: saleParam ? null : "1" })}
-                  className={`w-full border py-2 text-center text-xs uppercase tracking-wider ${
-                    saleParam
-                      ? "border-[#8b5a42] bg-[#8b5a42] text-white"
-                      : "border-[#ded7ca] bg-white text-[#8b5a42]"
-                  }`}
-                >
-                  {saleParam ? "✓ Showing Sale Edit" : "Filter: The Sale Edit"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setParam({ stock: stockParam ? null : "1" })}
-                  className={`w-full border py-2 text-center text-xs uppercase tracking-wider ${
-                    stockParam
-                      ? "border-[#515c4d] bg-[#515c4d] text-white"
-                      : "border-[#ded7ca] bg-white text-[#515c4d]"
-                  }`}
-                >
-                  {stockParam ? "✓ In Stock Only" : "Filter: In Stock Only"}
-                </button>
+                </div>
               </div>
             </div>
 
-            <div className="border-t border-[#e5dfd5] p-4 flex gap-2">
+            <div className="border-t border-[#e5dfd5] pt-4 mt-auto">
               <button
                 type="button"
                 onClick={() => {
                   router.push("/products");
                   setMobileFilterOpen(false);
                 }}
-                className="flex-1 border border-[#ded7ca] bg-white py-2.5 text-xs font-semibold tracking-wider uppercase text-[#615a51]"
+                className="w-full border border-[#171614] bg-[#171614] py-2.5 text-xs font-semibold tracking-wider uppercase text-white"
               >
-                Reset
-              </button>
-              <button
-                type="button"
-                onClick={() => setMobileFilterOpen(false)}
-                className="flex-1 border border-[#171614] bg-[#171614] py-2.5 text-xs font-semibold tracking-wider uppercase text-white"
-              >
-                Apply
+                Clear All Filters
               </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

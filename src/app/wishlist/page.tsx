@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useWishlist } from "@/components/wishlist-provider";
 import ProductCard from "@/components/product-card";
+import QuickViewModal from "@/components/quick-view-modal";
 import type { Product } from "@/lib/products";
 
 function getVisitorId(): string {
@@ -20,6 +21,7 @@ export default function WishlistPage() {
   const { ids, hydrated } = useWishlist();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -54,6 +56,13 @@ export default function WishlistPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      {/* Quick View Modal */}
+      <QuickViewModal
+        product={quickViewProduct}
+        isOpen={Boolean(quickViewProduct)}
+        onClose={() => setQuickViewProduct(null)}
+      />
+
       {/* Header */}
       <div className="border-b border-[#e5dfd5] pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
@@ -69,12 +78,14 @@ export default function WishlistPage() {
         </div>
 
         {products.length > 0 && (
-          <Link
-            href="/products"
-            className="text-xs font-semibold tracking-wider uppercase text-[#171614] hover:text-[#8b5a42] transition"
-          >
-            Continue Browsing Catalogue →
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/products"
+              className="text-xs font-semibold tracking-wider uppercase text-[#171614] hover:text-[#8b5a42] transition"
+            >
+              Continue Browsing Catalogue →
+            </Link>
+          </div>
         )}
       </div>
 
@@ -90,7 +101,7 @@ export default function WishlistPage() {
             Your Saved Collection is Empty
           </h2>
           <p className="mt-2 text-xs text-[#6b645b] max-w-sm mx-auto leading-relaxed">
-            Select the heart icon while exploring our collections to gather your preferred essentials in this space.
+            Select the heart icon while exploring our collections to gather your preferred essentials in this personal sanctuary.
           </p>
           <div className="mt-6">
             <Link
@@ -103,8 +114,12 @@ export default function WishlistPage() {
         </div>
       ) : (
         <div className="mt-10 grid grid-cols-2 gap-x-5 gap-y-12 sm:grid-cols-3 lg:grid-cols-4">
-          {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
+          {products.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onQuickView={(p) => setQuickViewProduct(p)}
+            />
           ))}
         </div>
       )}

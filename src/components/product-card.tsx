@@ -10,9 +10,17 @@ interface ProductCardProps {
   product: Product;
   rating?: { count: number; average: number };
   aspectRatio?: string;
+  onQuickView?: (product: Product) => void;
+  priority?: boolean;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({
+  product,
+  rating,
+  aspectRatio = "aspect-[3/4]",
+  onQuickView,
+  priority = false,
+}: ProductCardProps) {
   const compareAt = product.compareAtPrice;
   const onSale = compareAt !== undefined && compareAt > product.price;
   const { has, toggle } = useWishlist();
@@ -27,7 +35,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="group relative flex flex-col">
       {/* Product Image Frame */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#ede8df]">
+      <div className={`relative ${aspectRatio} w-full overflow-hidden bg-[#ede8df] border border-[#e5dfd5]`}>
         <Link
           href={`/products/${product.slug}`}
           className="block h-full w-full"
@@ -38,15 +46,16 @@ export default function ProductCard({ product }: ProductCardProps) {
             src={imgSrc}
             alt={product.name}
             fill
+            priority={priority}
             onError={() => setImageError(true)}
-            className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
+            className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         </Link>
 
-        {/* Badges: Sale */}
+        {/* Badges: Sale Archive */}
         {onSale && (
-          <span className="absolute left-3 top-3 border border-[#8b5a42] bg-[#faf8f5]/90 px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-[#8b5a42]">
+          <span className="absolute left-3 top-3 border border-[#8b5a42] bg-[#faf8f5]/95 px-2 py-0.5 text-[9px] font-semibold tracking-widest uppercase text-[#8b5a42]">
             Sale
           </span>
         )}
@@ -67,7 +76,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           }`}
         >
           <svg
-            className="h-4 w-4"
+            className="h-3.5 w-3.5"
             fill={wishlisted ? "currentColor" : "none"}
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -81,21 +90,43 @@ export default function ProductCard({ product }: ProductCardProps) {
           </svg>
         </button>
 
-        {/* Quick Sizes Preview on Desktop Hover */}
-        {product.sizes && product.sizes.length > 0 && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 hidden sm:block">
-            <p className="text-[10px] tracking-widest uppercase text-white/90">
-              Sizes: {product.sizes.join(" · ")}
-            </p>
-          </div>
-        )}
+        {/* Floating Quick View & Sizing Pill on Desktop Hover */}
+        <div className="absolute inset-x-3 bottom-3 hidden sm:flex flex-col gap-1.5 opacity-0 transition-all duration-300 transform translate-y-2 group-hover:opacity-100 group-hover:translate-y-0">
+          {onQuickView && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                onQuickView(product);
+              }}
+              className="w-full border border-[#171614] bg-[#faf8f5]/95 py-2 text-[10px] font-semibold tracking-[0.16em] uppercase text-[#171614] shadow-xs hover:bg-[#171614] hover:text-white transition"
+            >
+              Quick View
+            </button>
+          )}
+
+          {product.sizes && product.sizes.length > 0 && (
+            <div className="bg-[#171614]/85 py-1 px-2 text-center backdrop-blur-xs">
+              <p className="text-[9px] tracking-widest uppercase text-white/90">
+                Sizes: {product.sizes.join(" · ")}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Product Details */}
       <div className="pt-3 pb-1">
-        <p className="text-[10px] font-medium tracking-[0.16em] uppercase text-[#8c857b]">
-          {product.category}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-medium tracking-[0.18em] uppercase text-[#8c857b]">
+            {product.category}
+          </p>
+          {rating && rating.count > 0 && (
+            <span className="text-[10px] text-[#736c62] flex items-center gap-0.5">
+              <span className="text-[#8b5a42]">★</span> {rating.average}
+            </span>
+          )}
+        </div>
 
         <Link
           href={`/products/${product.slug}`}
@@ -111,6 +142,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           {onSale && compareAt && (
             <span className="text-[11px] text-[#9c958a] line-through">
               {formatPrice(compareAt)}
+            </span>
+          )}
+          {product.colors && product.colors.length > 1 && (
+            <span className="ml-auto text-[10px] text-[#8c857b]">
+              {product.colors.length} shades
             </span>
           )}
         </div>

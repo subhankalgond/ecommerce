@@ -3,10 +3,20 @@ import Razorpay from "razorpay";
 import { parseCart } from "@/lib/pricing";
 import type { ShippingAddress } from "@/lib/order-types";
 
+interface RazorpayApiError {
+  statusCode?: number;
+  error?: {
+    code?: string;
+    description?: string;
+    field?: string;
+  };
+  message?: string;
+}
+
 export async function POST(request: Request) {
   // 1. Check Razorpay configuration
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  const keyId = process.env.RAZORPAY_KEY_ID?.trim();
+  const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
   if (
     !keyId ||
     !keySecret ||
@@ -31,7 +41,7 @@ export async function POST(request: Request) {
     address?: unknown;
   };
   try {
-    body = await request.json();
+    body = (await request.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
@@ -66,23 +76,37 @@ export async function POST(request: Request) {
   // 4. Create the Razorpay order (amounts in paise)
   try {
     const rzp = new Razorpay({ key_id: keyId, key_secret: keySecret });
+
+    // Safe notes values (Razorpay limits each value to <= 256 characters)
+    const compactAddress = JSON.stringify({
+      fullName: address.fullName.slice(0, 40),
+      phone: address.phone.slice(0, 15),
+      line1: address.line1.slice(0, 60),
+      line2: (address.line2 ?? "").slice(0, 40),
+      city: address.city.slice(0, 30),
+      state: address.state.slice(0, 30),
+      pincode: address.pincode.slice(0, 10),
+    });
+
+    const compactItems = JSON.stringify(
+      cart.lines.map((l) => ({
+        id: l.product.id,
+        size: l.size,
+        qty: l.quantity,
+      }))
+    );
+
     const order = await rzp.orders.create({
       amount: cart.total,
       currency: "INR",
-      receipt: `nt_${Date.now()}`,
+      receipt: `nt_${Date.now()}`.slice(0, 40),
       notes: {
-        email,
-        items: JSON.stringify(
-          cart.lines.map((l) => ({
-            id: l.product.id,
-            size: l.size,
-            qty: l.quantity,
-          }))
-        ),
-        coupon: coupon ?? "",
+        email: email.slice(0, 100),
+        items: compactItems.slice(0, 255),
+        coupon: (coupon ?? "").slice(0, 30),
         discount: String(cart.discount),
         delivery,
-        address: JSON.stringify(address),
+        address: compactAddress.slice(0, 255),
       },
     });
 
@@ -92,9 +116,21 @@ export async function POST(request: Request) {
       currency: order.currency,
       keyId,
     });
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to create Razorpay order.";
+  } catch (err: unknown) {
+    console.error("[api/razorpay/order] Error creating order:", err);
+    
+    let message = "Failed to create Razorpay order.";
+    const rzpErr = err as RazorpayApiError;
+
+    if (rzpErr?.statusCode === 401 || rzpErr?.error?.description?.toLowerCase().includes("authentication failed")) {
+      message =
+        "Razorpay Authentication Failed (HTTP 401): The Key ID or Secret in .env is invalid or expired. Check your keys at dashboard.razorpay.com → Settings → API Keys.";
+    } else if (rzpErr?.error?.description) {
+      message = `Razorpay error: ${rzpErr.error.description}`;
+    } else if (err instanceof Error) {
+      message = err.message;
+    }
+
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
